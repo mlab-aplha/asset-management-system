@@ -1,0 +1,51 @@
+:root {
+  --navy: #00182d;
+  --teal: #073f4e;
+  --lime: #94c73d;
+  --glass-border: #ffffff3b;
+}
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Manrope', sans-serif;
+  color: white;
+  background-color: var(--navy);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Material icons */
+.material-icons {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  font-family: 'Material Symbols Outlined';
+}
+
+/* Common utility classes */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.hero-gradient {
+  background: radial-gradient(circle at top right, var(--teal), var(--navy));
+}
+
+/* Animations */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Import component styles */
+@import './pages/landing.css';
+@import './pages/auth/auth.css';
+@import './pages/dashboard/dashboard.css';
