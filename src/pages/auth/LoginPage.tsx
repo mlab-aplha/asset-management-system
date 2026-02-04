@@ -29,7 +29,6 @@ export const LoginPage: React.FC = () => {
                 setError(response.message || 'Invalid credentials');
             }
         } catch (err) {
-            // Handle the error properly
             const errorMessage = err instanceof Error ? err.message : 'An error occurred. Please try again.';
             setError(errorMessage);
             console.error('Login error:', err);
@@ -37,7 +36,6 @@ export const LoginPage: React.FC = () => {
             setLoading(false);
         }
     };
-
 
     const handleForgotPassword = () => {
         navigate('/forgot-password');
@@ -105,20 +103,22 @@ export const LoginPage: React.FC = () => {
                             required
                         />
 
-                        <InputField
-                            label="Password"
-                            icon="lock"
-                            type="password"
-                            placeholder="••••••••"
-                            value={credentials.password}
-                            onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                            required
-                            containerClassName="password-field"
-                        >
-                            <a className="forgot-password-link" onClick={handleForgotPassword}>
-                                Forgot Password?
-                            </a>
-                        </InputField>
+                        <div className="password-field-wrapper">
+                            <InputField
+                                label="Password"
+                                icon="lock"
+                                type="password"
+                                placeholder="••••••••"
+                                value={credentials.password}
+                                onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                                required
+                            />
+                            <div className="forgot-password-wrapper">
+                                <a className="forgot-password-link" onClick={handleForgotPassword}>
+                                    Forgot Password?
+                                </a>
+                            </div>
+                        </div>
 
                         <div className="remember-device">
                             <input

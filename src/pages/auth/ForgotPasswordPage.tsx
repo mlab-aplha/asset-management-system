@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from '../../core/services/AuthService';
-import type { PasswordResetRequest } from '../../core/types/auth';
 import { InputField } from '../../components/auth/InputField';
 import { AuthButton } from '../../components/auth/Button';
+import type { PasswordResetRequest } from '../../core/types/auth';
 
 export const ForgotPasswordPage: React.FC = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,8 +30,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 setError(response.message || 'Failed to send reset link');
             }
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'An error occurred. Please try again.';
-            setError(errorMessage);
+            setError(err instanceof Error ? err.message : 'An error occurred');
             console.error('Password reset error:', err);
         } finally {
             setLoading(false);
@@ -52,18 +51,11 @@ export const ForgotPasswordPage: React.FC = () => {
                         stroke="currentColor"
                         strokeWidth="0.5"
                     />
-                    <g className="hub-markers">
-                        <circle cx="650" cy="280" fill="#94c73d" r="4" />
-                        <circle cx="630" cy="320" fill="#94c73d" r="5" />
-                        <circle cx="250" cy="680" fill="#94c73d" r="4" />
-                        <circle cx="750" cy="550" fill="#94c73d" r="4" />
-                        <circle cx="550" cy="450" fill="#94c73d" r="4" />
-                    </g>
                 </svg>
             </div>
 
             <header className="auth-header">
-                <div className="auth-logo">
+                <div className="auth-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
                     <div className="auth-logo-icon">
                         <span className="material-icons">account_tree</span>
                     </div>
@@ -71,75 +63,114 @@ export const ForgotPasswordPage: React.FC = () => {
                         mLab <span className="auth-logo-subtext">AMS</span>
                     </h2>
                 </div>
+
+                <div className="auth-header-actions">
+                    <span className="auth-header-text">Remember your password?</span>
+                    <button className="auth-header-button" onClick={handleBackToLogin}>
+                        Back to Login
+                    </button>
+                </div>
             </header>
 
             <main className="auth-main">
                 <div className="auth-card">
-                    <div className="auth-card-header text-center">
-                        <div className="reset-icon">
-                            <span className="material-icons">lock_reset</span>
-                        </div>
-                        <h1 className="auth-title">Reset Your Password</h1>
-                        <p className="auth-subtitle">
-                            {success
-                                ? 'Reset link sent! Check your email and return to login.'
-                                : "Enter the email address associated with your account and we'll send you a link to reset your password."
-                            }
-                        </p>
-                    </div>
-
                     {!success ? (
-                        <form className="auth-form" onSubmit={handleSubmit}>
-                            {error && (
-                                <div className="auth-error">
-                                    <span className="material-icons">error</span>
-                                    {error}
-                                </div>
-                            )}
+                        <>
+                            <div className="reset-icon">
+                                <span className="material-icons">key</span>
+                            </div>
 
-                            <InputField
-                                label="Work Email"
-                                icon="mail"
-                                type="email"
-                                placeholder="name@mlab.co.za"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
+                            <div className="auth-card-header">
+                                <h1 className="auth-title">Reset Password</h1>
+                                <p className="auth-subtitle">
+                                    Enter your email address and we'll send you a link to reset your password.
+                                </p>
+                            </div>
 
-                            <AuthButton
-                                type="submit"
-                                loading={loading}
-                                variant="primary"
-                            >
-                                Send Reset Link
-                            </AuthButton>
-                        </form>
+                            <form className="auth-form" onSubmit={handleSubmit}>
+                                {error && (
+                                    <div className="auth-error">
+                                        <span className="material-icons">error</span>
+                                        {error}
+                                    </div>
+                                )}
+
+                                <InputField
+                                    label="Email Address"
+                                    icon="mail"
+                                    type="email"
+                                    placeholder="name@company.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    autoFocus
+                                />
+
+                                <AuthButton
+                                    type="submit"
+                                    loading={loading}
+                                    icon="send"
+                                    iconPosition="right"
+                                >
+                                    Send Reset Link
+                                </AuthButton>
+                            </form>
+                        </>
                     ) : (
                         <div className="success-message">
                             <span className="material-icons success-icon">check_circle</span>
-                            <p>Reset link sent successfully! Redirecting to login...</p>
+                            <h1 className="auth-title">Email Sent!</h1>
+                            <p className="auth-subtitle">
+                                We've sent a password reset link to <strong>{email}</strong>.
+                                Please check your inbox and follow the instructions.
+                            </p>
+                            <p style={{
+                                color: '#9ca3af',
+                                fontSize: '0.875rem',
+                                marginTop: '1rem'
+                            }}>
+                                Redirecting to login in 3 seconds...
+                            </p>
                         </div>
                     )}
 
-                    <div className="back-to-login">
-                        <button className="back-button" onClick={handleBackToLogin}>
-                            <span className="material-icons">arrow_back</span>
-                            Back to Login
-                        </button>
+                    <div className="security-verification">
+                        <p className="security-title">Secure Password Reset</p>
+                        <div className="security-icons">
+                            <div className="security-icon">
+                                <span className="material-icons">encrypted</span>
+                            </div>
+                            <div className="security-icon">
+                                <span className="material-icons">timer</span>
+                            </div>
+                            <div className="security-icon">
+                                <span className="material-icons">verified_user</span>
+                            </div>
+                        </div>
                     </div>
+
+                    {!success && (
+                        <div className="back-to-login">
+                            <button className="back-button" onClick={handleBackToLogin}>
+                                <span className="material-icons">arrow_back</span>
+                                Back to Login
+                            </button>
+                        </div>
+                    )}
                 </div>
             </main>
 
-            <footer className="auth-footer compact">
+            <footer className="auth-footer">
                 <div className="security-notice">
                     <span className="material-icons">shield</span>
                     <span>Secured by Neptune Tech Encryption</span>
                 </div>
 
-                <p className="copyright">
-                    mLab South Africa © 2026
-                </p>
+                <div className="footer-links">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">System Status</a>
+                    <a href="#">mLab South Africa © 2026</a>
+                </div>
             </footer>
         </div>
     );
