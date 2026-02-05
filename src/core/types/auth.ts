@@ -1,31 +1,19 @@
 export interface AuthCredentials {
-    email: string;
-    password: string;
-    rememberDevice?: boolean;
-}
-
-export interface PasswordResetRequest {
-    email: string;
+  email: string;
+  password: string;
+  rememberDevice: boolean;
 }
 
 export interface AuthResponse {
-    success: boolean;
-    message: string;
-    token?: string;
-    user?: UserProfile;
+  success: boolean;
+  message?: string;
+  user?: any;
 }
 
 export interface UserProfile {
-    id: string;
-    email: string;
-    name: string;
-    role: 'admin' | 'facilitator';
-    hub: string;
-    department: string;
-    avatar?: string;
-}
-
-export interface SecurityVerification {
-    type: 'email' | 'sms';
-    status: 'enabled' | 'disabled' | 'pending';
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  emailVerified: boolean;
 }

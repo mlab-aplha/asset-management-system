@@ -8,13 +8,26 @@ export const DashboardPage: React.FC = () => {
     const user = AuthService.getCurrentUser();
 
     const handleLogout = async () => {
-        await AuthService.logout();
-        navigate('/login');
+        try {
+            await AuthService.logout();
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
     };
 
     const handleNavigation = (path: string) => {
-        // For now, just log the navigation
-        console.log(`Navigating to: ${path}`);
+        // Navigate to the actual routes
+        if (path === 'registry') {
+            navigate('/registry');
+        } else if (path === 'overview') {
+            // Already on dashboard
+            window.scrollTo(0, 0);
+        } else {
+            // For other pages, you can add routes later
+            console.log(`Navigating to: ${path}`);
+            // Example: navigate(`/${path}`);
+        }
     };
 
     return (
@@ -103,10 +116,11 @@ export const DashboardPage: React.FC = () => {
 
                 <div className="dashboard-user-profile">
                     <div className="dashboard-user-avatar">
-                        <div className="dashboard-avatar-image"></div>
+                        <div className="dashboard-avatar-image">
+                            {user?.name?.charAt(0) || 'U'}
+                        </div>
                     </div>
                     <div className="dashboard-user-info">
-                        {/* Use actual user data if available */}
                         <p className="dashboard-user-name">
                             {user?.name || 'Executive User'}
                         </p>
@@ -276,7 +290,9 @@ export const DashboardPage: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
-                            <button className="alerts-view-all">View All Security Logs</button>
+                            <button className="alerts-view-all" onClick={() => handleNavigation('alerts')}>
+                                View All Security Logs
+                            </button>
                         </div>
 
                         {/* Recent Activity */}

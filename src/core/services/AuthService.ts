@@ -1,68 +1,146 @@
-import type { AuthCredentials, PasswordResetRequest, AuthResponse, UserProfile } from '../types/auth';
+import { 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut,
+  User
+} from "firebase/auth";
+import { auth } from "../../../backend-firebase/src/firebase/config";
+import type { AuthCredentials } from "../types/auth";
 
 export class AuthService {
-    private static readonly API_BASE = '/api/auth';
+  static async login(credentials: AuthCredentials) {
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        credentials.email,
+        credentials.password
+      );
+      
+      // Store remember device preference (simple localStorage)
+      if (credentials.rememberDevice) {
+        localStorage.setItem('rememberDevice', 'true');
+      }
 
-    static async login(credentials: AuthCredentials): Promise<AuthResponse> {
-        try {
-            const response = await fetch(`${this.API_BASE}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(credentials)
-            });
+      return {
+        success: true,
+        user: userCredential.user,
+        message: 'Login successful'
+      };
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      // User-friendly error messages
+      let message = 'Invalid email or password';
+      switch (error.code) {
+        case 'auth/invalid-email':
+          message = 'Please enter a valid email address';
+          break;
+        case 'auth/user-disabled':
+          message = 'This account has been disabled';
+          break;
+        case 'auth/user-not-found':
+          message = 'No account found with this email';
+          break;
+        case 'auth/wrong-password':
+          message = 'Incorrect password';
+          break;
+        case 'auth/too-many-requests':
+          message = 'Too many failed attempts. Try again later';
+          break;
+      }
 
-            const data = await response.json();
-
-            if (data.success && data.token) {
-                localStorage.setItem('auth_token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-            }
-
-            return data;
-        } catch (error) {
-            console.error('Login error:', error);
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : 'Network error. Please check your connection.'
-            };
-        }
+      return {
+        success: false,
+        message: message
+      };
     }
+  }
 
-    static async logout(): Promise<void> {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
-        await fetch(`${this.API_BASE}/logout`, { method: 'POST' });
-    }
+  static async register(credentials: AuthCredentials) {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        credentials.email,
+        credentials.password
+      );
 
-    static async requestPasswordReset(request: PasswordResetRequest): Promise<AuthResponse> {
-        const response = await fetch(`${this.API_BASE}/reset-password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(request)
-        });
-        return response.json();
-    }
+      return {
+        success: true,
+        user: userCredential.user,
+        message: 'Registration successful'
+      };
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      
+      let message = 'An error occurred during registration';
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          message = 'Email already in use';
+          break;
+        case 'auth/invalid-email':
+          message = 'Invalid email address';
+          break;
+        case 'auth/weak-password':
+          message = 'Password is too weak';
+          break;
+      }
 
-    static async resetPassword(token: string, newPassword: string): Promise<AuthResponse> {
-        const response = await fetch(`${this.API_BASE}/reset-password/${token}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ newPassword })
-        });
-        return response.json();
+      return {
+        success: false,
+        message: message
+      };
     }
+  }
 
-    static getCurrentUser(): UserProfile | null {
-        const userStr = localStorage.getItem('user');
-        return userStr ? JSON.parse(userStr) : null;
-    }
+  static async forgotPassword(email: string) {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return {
+        success: true,
+        message: 'Password reset email sent. Check your inbox.'
+      };
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      
+      let message = 'Failed to send reset email';
+      if (error.code === 'auth/user-not-found') {
+        message = 'No account found with this email';
+      }
 
-    static isAuthenticated(): boolean {
-        return !!localStorage.getItem('auth_token');
+      return {
+        success: false,
+        message: message
+      };
     }
+  }
 
-    static hasRole(role: 'admin' | 'facilitator'): boolean {
-        const user = this.getCurrentUser();
-        return user?.role === role;
+  static async logout() {
+    try {
+      await signOut(auth);
+      return {
+        success: true,
+        message: 'Logged out successfully'
+      };
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      return {
+        success: false,
+        message: 'Error during logout'
+      };
     }
+  }
+
+  static getCurrentUser(): User | null {
+    return auth.currentUser;
+  }
+
+  static onAuthStateChanged(callback: (user: User | null) => void) {
+    return auth.onAuthStateChanged(callback);
+  }
+
+  // Check if user is logged in
+  static isAuthenticated() {
+    return !!auth.currentUser;
+  }
 }

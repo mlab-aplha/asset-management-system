@@ -1,49 +1,166 @@
-import type { Asset, CreateAssetDto, UpdateAssetDto, HubLocation, AssetStatus } from '../entities/Asset';
+import { 
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp
+} from "firebase/firestore";
+import { db } from "../../../backend-firebase/src/firebase/config";
+
+export interface Asset {
+  id?: string;
+  name: string;
+  description: string;
+  category: string;
+  status: 'available' | 'assigned' | 'maintenance' | 'retired';
+  location: string;
+  assignedTo?: string;
+  serialNumber?: string;
+  purchaseDate?: string;
+  purchasePrice?: number;
+  createdAt?: any;
+  updatedAt?: any;
+}
 
 export class AssetService {
-    private static readonly API_BASE = '/api/assets';
-
-    static async getAll(): Promise<Asset[]> {
-        const response = await fetch(this.API_BASE);
-        return response.json();
+  static async getAllAssets() {
+    try {
+      const assetsRef = collection(db, "assets");
+      const q = query(assetsRef, orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+      
+      const assets = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Asset[];
+      
+      return {
+        success: true,
+        data: assets
+      };
+    } catch (error: any) {
+      console.error('Get assets error:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch assets'
+      };
     }
+  }
 
-    static async getById(id: string): Promise<Asset> {
-        const response = await fetch(`${this.API_BASE}/${id}`);
-        return response.json();
+  static async getAsset(id: string) {
+    try {
+      const docRef = doc(db, "assets", id);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return {
+          success: true,
+          data: { id: docSnap.id, ...docSnap.data() } as Asset
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Asset not found'
+        };
+      }
+    } catch (error: any) {
+      console.error('Get asset error:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch asset'
+      };
     }
+  }
 
-    static async create(asset: CreateAssetDto): Promise<Asset> {
-        const response = await fetch(this.API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(asset)
-        });
-        return response.json();
+  static async createAsset(asset: Omit<Asset, 'id'>) {
+    try {
+      const assetsRef = collection(db, "assets");
+      const newAsset = {
+        ...asset,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(assetsRef, newAsset);
+      
+      return {
+        success: true,
+        id: docRef.id,
+        message: 'Asset created successfully'
+      };
+    } catch (error: any) {
+      console.error('Create asset error:', error);
+      return {
+        success: false,
+        message: 'Failed to create asset'
+      };
     }
+  }
 
-    static async update(id: string, updates: UpdateAssetDto): Promise<Asset> {
-        const response = await fetch(`${this.API_BASE}/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updates)
-        });
-        return response.json();
+  static async updateAsset(id: string, asset: Partial<Asset>) {
+    try {
+      const docRef = doc(db, "assets", id);
+      await updateDoc(docRef, {
+        ...asset,
+        updatedAt: serverTimestamp()
+      });
+      
+      return {
+        success: true,
+        message: 'Asset updated successfully'
+      };
+    } catch (error: any) {
+      console.error('Update asset error:', error);
+      return {
+        success: false,
+        message: 'Failed to update asset'
+      };
     }
+  }
 
-    static async delete(id: string): Promise<void> {
-        await fetch(`${this.API_BASE}/${id}`, {
-            method: 'DELETE'
-        });
+  static async deleteAsset(id: string) {
+    try {
+      await deleteDoc(doc(db, "assets", id));
+      return {
+        success: true,
+        message: 'Asset deleted successfully'
+      };
+    } catch (error: any) {
+      console.error('Delete asset error:', error);
+      return {
+        success: false,
+        message: 'Failed to delete asset'
+      };
     }
+  }
 
-    static async getByLocation(location: HubLocation): Promise<Asset[]> {
-        const response = await fetch(`${this.API_BASE}/location/${location}`);
-        return response.json();
+  static async getAssetsByStatus(status: Asset['status']) {
+    try {
+      const assetsRef = collection(db, "assets");
+      const q = query(assetsRef, where("status", "==", status));
+      const snapshot = await getDocs(q);
+      
+      const assets = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Asset[];
+      
+      return {
+        success: true,
+        data: assets
+      };
+    } catch (error: any) {
+      console.error('Get assets by status error:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch assets'
+      };
     }
-
-    static async getByStatus(status: AssetStatus): Promise<Asset[]> {
-        const response = await fetch(`${this.API_BASE}/status/${status}`);
-        return response.json();
-    }
+  }
 }
