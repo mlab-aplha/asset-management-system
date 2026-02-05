@@ -1,0 +1,64 @@
+@import './pages/landing.css';
+@import './pages/auth/auth.css';
+@import './pages/dashboard/dashboard.css';
+
+/* Global Variables and Reset */
+:root {
+  --navy: #00182d;
+  --teal: #073f4e;
+  --lime: #94c73d;
+  --glass-border: #ffffff3b;
+}
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Manrope', sans-serif;
+  color: white;
+  background-color: var(--navy);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Material Icons - Updated */
+.material-icons, 
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Common utility classes */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.hero-gradient {
+  background: radial-gradient(circle at top right, var(--teal), var(--navy));
+}
+
+/* Animations */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
