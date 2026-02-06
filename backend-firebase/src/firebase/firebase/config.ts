@@ -3,20 +3,17 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-// Your Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyALIvtWYRB6KjCP9g5cmWAksC-XBxg37Es",
-  authDomain: "assetmanagement-57ba5.firebaseapp.com",
-  projectId: "assetmanagement-57ba5",
-  storageBucket: "assetmanagement-57ba5.firebasestorage.app",
-  messagingSenderId: "293783899300",
-  appId: "1:293783899300:web:2a50a34cc49f2622b72a31"
+  apiKey: "AIzaSyAbTqnX_KiF1_HzY10IasX5Zh8vfrrfMsc",
+  authDomain: "asset-management-6cee2.firebaseapp.com",
+  projectId: "asset-management-6cee2",
+  storageBucket: "asset-management-6cee2.firebasestorage.app",
+  messagingSenderId: "421547632581",
+  appId: "1:421547632581:web:a83f68169f9d675971cdac"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
