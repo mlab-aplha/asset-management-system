@@ -27,7 +27,7 @@ export class BaseService<T extends { id?: string }> {
 
   async update(id: string, item: Partial<T>): Promise<void> {
     const docRef = doc(this.db, this.collectionName, id);
-    await updateDoc(docRef, item);
+    await updateDoc(docRef, item as any);
   }
 
   async delete(id: string): Promise<void> {
