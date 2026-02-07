@@ -1,73 +1,178 @@
-# React + TypeScript + Vite
+   mLabs South Africa - Asset Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+##  Project Overview
+Asset management system for tracking equipment across all mLab South Africa locations (Tshwane, Polokwane, Galeshewe).
 
-Currently, two official plugins are available:
+## Team
+- **Backend Developer:** [Your Name] - TypeScript services, Firebase, database
+- **Frontend Developer:** [Partner's Name] - React components, UI/UX
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Project Structure
+mlab-asset-management/
+├── backend/services/ ← TypeScript services (Backend)
+├── frontend/ ← React application (Frontend)
+├── firebase/ ← Firebase configuration
+└── README.md ← This documentation
 
-## React Compiler
+text
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Quick Start for Frontend Developer
 
-## Expanding the ESLint configuration
+### 1. Import Backend Services
+```typescript
+import { authService, assetService } from '../backend/services';
+2. Test Connection First
+typescript
+// TestConnection.tsx
+import { assetService } from '../backend/services';
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+export function TestConnection() {
+  const testBackend = async () => {
+    const assets = await assetService.getAll();
+    console.log('✅ Backend works!', assets);
+  };
+  return <button onClick={testBackend}>Test</button>;
+}
+3. Available Services
+authService - Login, register, authentication
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+assetService - Manage assets (laptops, cameras, etc.)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+userService - User management
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+locationService - Get Tshwane, Polokwane, Galeshewe data
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+dashboardService - Statistics and analytics
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+📍 mLab South Africa Rules
+Only @mlab.co.za or @mlab.org.za emails
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+South African phone format (+27 XXX XXX XXXX)
+
+Only 3 locations: Tshwane, Polokwane, Galeshewe
+
+Currency in ZAR (South African Rand)
+
+👤 Test Users
+Admin: admin@mlab.co.za
+
+Manager: manager.polokwane@mlab.co.za
+
+User: staff.galeshewe@mlab.co.za
+
+✅ First Tasks
+Create TestConnection.tsx component
+
+Build Login page with authService.login()
+
+Build Dashboard with dashboardService.getDashboardStats()
+
+Build Asset list with assetService.getAll()
+
+📞 Support
+Backend issues: Contact [Your Name]
+
+Frontend issues: Contact [Partner's Name]
+
+Start with TestConnection.tsx to verify everything works!
+
+Last Updated: $(date)
+
+text
+
+**Replace your current README.md with this clean version:**
+
+```bash
+cat > README.md << 'EOF'
+# mLabs South Africa - Asset Management System
+
+## 🎯 Project Overview
+Asset management system for tracking equipment across all mLab South Africa locations (Tshwane, Polokwane, Galeshewe).
+
+## 👥 Team
+- **Backend Developer:** [Your Name] - TypeScript services, Firebase, database
+- **Frontend Developer:** [Partner's Name] - React components, UI/UX
+
+## 📁 Project Structure
+mlab-asset-management/
+├── backend/services/ ← TypeScript services (Backend)
+├── frontend/ ← React application (Frontend)
+├── firebase/ ← Firebase configuration
+└── README.md ← This documentation
+
+text
+
+## 🚀 Quick Start for Frontend Developer
+
+### 1. Import Backend Services
+```typescript
+import { authService, assetService } from '../backend/services';
+2. Test Connection First
+typescript
+// TestConnection.tsx
+import { assetService } from '../backend/services';
+
+export function TestConnection() {
+  const testBackend = async () => {
+    const assets = await assetService.getAll();
+    console.log('✅ Backend works!', assets);
+  };
+  return <button onClick={testBackend}>Test</button>;
+}
+3. Available Services
+authService - Login, register, authentication
+
+assetService - Manage assets (laptops, cameras, etc.)
+
+userService - User management
+
+locationService - Get Tshwane, Polokwane, Galeshewe data
+
+dashboardService - Statistics and analytics
+
+📍 mLab South Africa Rules
+Only @mlab.co.za or @mlab.org.za emails
+
+South African phone format (+27 XXX XXX XXXX)
+
+Only 3 locations: Tshwane, Polokwane, Galeshewe
+
+Currency in ZAR (South African Rand)
+
+👤 Test Users
+Admin: admin@mlab.co.za
+
+Manager: manager.polokwane@mlab.co.za
+
+User: staff.galeshewe@mlab.co.za
+
+✅ First Tasks
+Create TestConnection.tsx component
+
+Build Login page with authService.login()
+
+Build Dashboard with dashboardService.getDashboardStats()
+
+Build Asset list with assetService.getAll()
+
+📞 Support
+Backend issues: Contact [Your Name]
+
+Frontend issues: Contact [Partner's Name]
+
+Start with TestConnection.tsx to verify everything works!
+
+Last Updated: $(date)
+EOF
+
+text
+
+**Then commit:**
+```bash
+git add README.md
+git commit -m "Update README with proper formatting"
+git push
+This is clean and clear for your partner! ✅
+
+
+ 
