@@ -71,3 +71,39 @@ export default defineConfig([
   },
 ])
 ```
+# User Credentials & Database Setup
+
+## 📋 Default User Accounts
+
+### Admin User (Full Access)
+- **Email**: `admin@mlab.com`
+- **Password**: `Admin123!`
+- **Role**: Administrator
+- **Permissions**: Full system access, can manage all assets, locations, users, and approve requests
+
+### Facilitator User (Limited Access)
+- **Email**: `facilitator@mlab.co.za`
+- **Password**: `Facilitator123!`
+- **Role**: Facilitator
+- **Permissions**: View assigned location assets, request assets for their location, view own requests
+
+## 🔐 Password Requirements
+All passwords must meet these criteria:
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special character (!@#$%^&*)
+
+## 🗄️ Database Migration Setup
+
+### Prerequisites
+1. Firebase project with Firestore database enabled
+2. Service account key JSON file from Firebase Console
+
+### Migration Steps
+
+#### 1. Create Migration Directory
+```bash
+mkdir database-migration
+cd database-migration
