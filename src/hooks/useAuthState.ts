@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { AuthService } from '../core/services/AuthService';
+import { AuthService } from '../../backend-firebase/src/services/AuthService';
 
 export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -22,18 +22,18 @@ export const useAuthState = () => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    return await AuthService.login({ 
-      email, 
-      password, 
-      rememberDevice: false 
+    return await AuthService.login({
+      email,
+      password,
+      rememberDevice: false
     });
   };
 
   const signUp = async (email: string, password: string) => {
-    return await AuthService.register({ 
-      email, 
-      password, 
-      rememberDevice: false 
+    return await AuthService.register({
+      email,
+      password,
+      rememberDevice: false
     });
   };
 

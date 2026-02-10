@@ -1,26 +1,36 @@
-import type { HubLocation } from './Asset';
-
 export interface User {
     id: string;
+    displayName: string;
     email: string;
-    name: string;
-    role: UserRole;
+    role: 'admin' | 'facilitator';
+    department?: string;
+    status: 'active' | 'inactive';
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+export interface UserFormData {
+    displayName: string;
+    email: string;
+    role: 'admin' | 'facilitator';
     department: string;
-    hub: HubLocation;
-    phone?: string;
-    isActive: boolean;
-    createdAt: Date;
+    status: 'active' | 'inactive';
 }
 
-export enum UserRole {
-    FACILITATOR = 'facilitator',
-    ADMIN = 'admin'
+export interface UserFilters {
+    searchTerm?: string;
+    status?: 'all' | 'active' | 'inactive';
+    role?: 'all' | 'admin' | 'facilitator';
+    department?: string;
+    page?: number;
+    itemsPerPage?: number;
 }
 
-export const UserRoleLabels: Record<UserRole, string> = {
-    [UserRole.FACILITATOR]: 'Facilitator',
-    [UserRole.ADMIN]: 'Administrator'
-};
-
-export type CreateUserDto = Omit<User, 'id' | 'createdAt'>;
-export type UpdateUserDto = Partial<CreateUserDto>;
+export interface UserStats {
+    totalUsers: number;
+    activeUsers: number;
+    inactiveUsers: number;
+    adminsCount: number;
+    facilitatorsCount: number;
+    usersByDepartment: Record<string, number>;
+}

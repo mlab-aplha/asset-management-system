@@ -3,26 +3,29 @@ import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
-import { AssetRegistryPage } from './pages/AssetRegistry/AssetRegistryPage'; import { PrivateRoute } from './components/auth/PrivateRoute';
+import { AssetRegistryPage } from './pages/AssetRegistry/AssetRegistryPage';
+import { AssetDetailPage } from './pages/AssetDetail/AssetDetailPage';
+import { UserManagementPage } from './pages/UserManagement/UserManagementPage';
+import { LocationManagementPage } from './pages/LocationManagement/LocationManagementPage';
 import './App.css';
 
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/dashboard" element={
-          <PrivateRoute>
-            <DashboardPage />
-          </PrivateRoute>
-        } />
-        <Route path="/registry" element={
-          <PrivateRoute>
-            <AssetRegistryPage />
-          </PrivateRoute>
-        } />
+
+        {/* Protected routes - add PrivateRoute later */}
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/assets" element={<AssetRegistryPage />} />
+        <Route path="/assets/:id" element={<AssetDetailPage />} />
+        <Route path="/users" element={<UserManagementPage />} />
+        <Route path="/locations" element={<LocationManagementPage />} />
+
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

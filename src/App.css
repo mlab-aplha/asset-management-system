@@ -1,13 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
 @import './pages/landing.css';
 @import './pages/auth/auth.css';
-@import './pages/dashboard/dashboard.css';
+@import './components/ui/ui.css';
+@import './components/layout/layout.css';
+@import './features/adin_features/dashboard.css';
 
 /* Global Variables and Reset */
 :root {
   --navy: #00182d;
   --teal: #073f4e;
   --lime: #94c73d;
-  --glass-border: #ffffff3b;
+  --lime-light: #a5e04a;
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --shadow-light: 0 4px 20px rgba(0, 0, 0, 0.1);
+  --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.15);
+  --shadow-heavy: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
 /* Reset and base styles */
@@ -23,9 +31,11 @@ body {
   background-color: var(--navy);
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Material Icons - Updated */
+/* Material Icons */
 .material-icons, 
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
@@ -60,5 +70,18 @@ body {
   75%, 100% {
     transform: scale(2);
     opacity: 0;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }

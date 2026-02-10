@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from '../../core/services/AuthService';
+import { AuthService } from '../../../backend-firebase/src/services/AuthService';
 import { InputField } from '../../components/auth/InputField';
 import { AuthButton } from '../../components/auth/Button';
 import type { PasswordResetRequest } from '../../core/types/auth';

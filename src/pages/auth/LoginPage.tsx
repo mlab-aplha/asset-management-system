@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from '../../core/services/AuthService';
+import { AuthService } from '../../../backend-firebase/src/services/AuthService';
 import type { AuthCredentials } from '../../core/types/auth';
 import { InputField } from '../../components/auth/InputField';
 import { AuthButton } from '../../components/auth/Button';
@@ -21,7 +21,8 @@ export const LoginPage: React.FC = () => {
         setError('');
 
         try {
-            const response = await AuthService.login(credentials);
+            // Pass email and password as separate arguments
+            const response = await AuthService.login(credentials.email, credentials.password);
 
             if (response.success) {
                 navigate('/dashboard');
@@ -108,7 +109,7 @@ export const LoginPage: React.FC = () => {
                                 label="Password"
                                 icon="lock"
                                 type="password"
-                                placeholder="••••••••"
+                                placeholder="******"
                                 value={credentials.password}
                                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                                 required

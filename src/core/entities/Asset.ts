@@ -1,16 +1,20 @@
+// src/core/entities/Asset.ts
 export interface Asset {
     id: string;
     name: string;
-    serialNumber: string;
-    category: AssetCategory;
-    status: AssetStatus;
+    category: string;
+    status: 'available' | 'assigned' | 'maintenance' | 'retired';
+    location: string;
+    serialNumber?: string;
+    purchaseDate?: Date;
+    value?: number;
     assignedTo?: string;
-    purchaseDate: Date;
-    warrantyExpiry?: Date;
-    location: HubLocation;
-    tags: string[];
-    value: number;
-    maintenanceSchedule?: Date;
+    notes?: string;
+    manufacturer?: string;
+    description?: string;
+    assignedDate?: Date;
+    updatedAt?: Date;
+    createdAt?: Date;
 }
 
 export type CreateAssetDto = Omit<Asset, 'id'>;
