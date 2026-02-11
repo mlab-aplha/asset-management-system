@@ -3,10 +3,13 @@ export interface User {
     displayName: string;
     email: string;
     role: 'admin' | 'facilitator';
-    department?: string;
+    department: string;
     status: 'active' | 'inactive';
-    createdAt?: Date;
-    updatedAt?: Date;
+    uid?: string;
+    primaryLocationId?: string;
+    assignedHubIds?: string[];
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface UserFormData {
@@ -14,16 +17,14 @@ export interface UserFormData {
     email: string;
     role: 'admin' | 'facilitator';
     department: string;
-    status: 'active' | 'inactive';
+    status?: 'active' | 'inactive';
 }
 
 export interface UserFilters {
     searchTerm?: string;
-    status?: 'all' | 'active' | 'inactive';
-    role?: 'all' | 'admin' | 'facilitator';
+    status?: 'active' | 'inactive' | 'all';
+    role?: 'admin' | 'facilitator' | 'all';
     department?: string;
-    page?: number;
-    itemsPerPage?: number;
 }
 
 export interface UserStats {

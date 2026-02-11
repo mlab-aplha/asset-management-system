@@ -9,6 +9,7 @@ interface UserFormProps {
     onCancel: () => void;
     isSubmitting: boolean;
     title: string;
+    errors?: Record<string, string>; // Add this line
 }
 
 export const UserForm: React.FC<UserFormProps> = ({
@@ -16,7 +17,8 @@ export const UserForm: React.FC<UserFormProps> = ({
     onSubmit,
     onCancel,
     isSubmitting,
-    title
+    title,
+    errors: externalErrors // Receive external errors
 }) => {
     const [formData, setFormData] = useState<UserFormData>({
         displayName: '',
@@ -28,6 +30,9 @@ export const UserForm: React.FC<UserFormProps> = ({
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Merge external errors with internal errors
+    const allErrors = { ...errors, ...externalErrors };
 
     // Get validation data
     const roles = UserValidation.getValidRoles();
@@ -41,7 +46,8 @@ export const UserForm: React.FC<UserFormProps> = ({
             [name]: value
         }));
 
-        if (errors[name]) {
+        // Clear error for this field when user starts typing
+        if (allErrors[name]) {
             setErrors(prev => ({
                 ...prev,
                 [name]: ''
@@ -69,12 +75,12 @@ export const UserForm: React.FC<UserFormProps> = ({
                     name="displayName"
                     value={formData.displayName}
                     onChange={handleInputChange}
-                    className="form-input"
+                    className={`form-input ${allErrors.displayName ? 'error' : ''}`}
                     placeholder="Enter full name"
                     disabled={isSubmitting}
                 />
-                {errors.displayName && (
-                    <span className="error-text">{errors.displayName}</span>
+                {allErrors.displayName && (
+                    <span className="error-text">{allErrors.displayName}</span>
                 )}
             </div>
 
@@ -87,12 +93,12 @@ export const UserForm: React.FC<UserFormProps> = ({
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="form-input"
+                    className={`form-input ${allErrors.email ? 'error' : ''}`}
                     placeholder="user@example.com"
                     disabled={isSubmitting}
                 />
-                {errors.email && (
-                    <span className="error-text">{errors.email}</span>
+                {allErrors.email && (
+                    <span className="error-text">{allErrors.email}</span>
                 )}
             </div>
 
@@ -104,7 +110,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                     name="role"
                     value={formData.role}
                     onChange={handleInputChange}
-                    className="form-select"
+                    className={`form-select ${allErrors.role ? 'error' : ''}`}
                     disabled={isSubmitting}
                 >
                     {roles.map((role) => (
@@ -113,6 +119,9 @@ export const UserForm: React.FC<UserFormProps> = ({
                         </option>
                     ))}
                 </select>
+                {allErrors.role && (
+                    <span className="error-text">{allErrors.role}</span>
+                )}
             </div>
 
             <div className="form-group">
@@ -123,7 +132,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                     name="department"
                     value={formData.department}
                     onChange={handleInputChange}
-                    className="form-select"
+                    className={`form-select ${allErrors.department ? 'error' : ''}`}
                     disabled={isSubmitting}
                 >
                     <option value="">Select department</option>
@@ -140,13 +149,13 @@ export const UserForm: React.FC<UserFormProps> = ({
                         name="departmentOther"
                         value={formData.department}
                         onChange={handleInputChange}
-                        className="form-input mt-2"
+                        className={`form-input mt-2 ${allErrors.department ? 'error' : ''}`}
                         placeholder="Enter custom department"
                         disabled={isSubmitting}
                     />
                 )}
-                {errors.department && (
-                    <span className="error-text">{errors.department}</span>
+                {allErrors.department && (
+                    <span className="error-text">{allErrors.department}</span>
                 )}
             </div>
 
@@ -158,7 +167,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="form-select"
+                    className={`form-select ${allErrors.status ? 'error' : ''}`}
                     disabled={isSubmitting}
                 >
                     {statuses.map((status) => (
@@ -167,6 +176,9 @@ export const UserForm: React.FC<UserFormProps> = ({
                         </option>
                     ))}
                 </select>
+                {allErrors.status && (
+                    <span className="error-text">{allErrors.status}</span>
+                )}
             </div>
 
             <div className="form-actions">

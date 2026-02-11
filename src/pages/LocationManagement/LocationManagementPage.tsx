@@ -34,12 +34,12 @@ export const LocationManagementPage: React.FC = () => {
 
     useEffect(() => {
         loadLocations();
-    }, [loadLocations]); // Added loadLocations to dependency array
+    }, [loadLocations]);
 
     const filteredLocations = locations.filter(location => {
         const matchesSearch = searchTerm === '' ||
             location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            location.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (location.address || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             location.primaryContact?.name.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesStatus = statusFilter === 'all' || location.status === statusFilter;
@@ -100,12 +100,13 @@ export const LocationManagementPage: React.FC = () => {
         navigate(`/locations/${locationId}/assets`);
     }, [navigate]);
 
-    const totalAssets = locations.reduce((sum, loc) => sum + loc.totalAssets, 0);
+    const totalAssets = locations.reduce((sum, loc) => sum + (loc.totalAssets || 0), 0);
 
     return (
         <DashboardLayout activePage="locations">
             <div className="location-management-container">
                 {/* Add/Edit Location Modal */}
+
                 <Modal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
@@ -122,20 +123,27 @@ export const LocationManagementPage: React.FC = () => {
                     <LocationForm
                         initialData={editingLocation ? {
                             name: editingLocation.name,
-                            address: editingLocation.address,
+                            address: editingLocation.address || '',
                             type: editingLocation.type,
                             status: editingLocation.status,
-                            totalAssets: editingLocation.totalAssets,
-                            contactName: editingLocation.primaryContact.name,
-                            contactEmail: editingLocation.primaryContact.email,
-                            contactPhone: editingLocation.primaryContact.phone || '',
+                            totalAssets: editingLocation.totalAssets || 0,
+                            contactName: editingLocation.primaryContact?.name || '',
+                            contactEmail: editingLocation.primaryContact?.email || '',
+                            contactPhone: editingLocation.primaryContact?.phone || '',
                             description: editingLocation.description || '',
-                            region: editingLocation.region || ''
+                            region: editingLocation.region || '',
+                            code: editingLocation.code,
+                            city: editingLocation.city,
+                            country: editingLocation.country,
+                            managerId: editingLocation.managerId,
+                            maxAssets: editingLocation.capacity?.maxAssets
                         } : undefined}
                         onSubmit={handleSubmitLocation}
                         onCancel={() => setIsModalOpen(false)}
                         isSubmitting={loading}
                         title={editingLocation ? 'Update Location' : 'Add Location'}
+                        mode={editingLocation ? 'edit' : 'add'}
+                        existingLocations={locations}
                     />
                 </Modal>
 

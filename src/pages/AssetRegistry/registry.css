@@ -1,11 +1,5 @@
-/* Remove these conflicting styles */
+/* Asset Registry Page Styles */
 .registry-page {
-    /* REMOVE THESE - DashboardLayout handles this */
-    /* display: flex; */
-    /* min-height: 100vh; */
-    /* background: radial-gradient(circle at top right, #073f4e, #00182d); */
-    
-    /* ADD THESE instead: */
     display: flex;
     flex-direction: column;
     padding: 2rem;
@@ -14,9 +8,9 @@
     font-family: 'Manrope', sans-serif;
 }
 
-/* Update header to work within DashboardLayout */
+/* Header Styles */
 .registry-header {
-    padding: 0 0 1rem 0; /* Remove top padding since DashboardLayout provides it */
+    padding: 0 0 1rem 0;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -24,57 +18,6 @@
     flex-wrap: wrap;
 }
 
-/* Remove duplicate button styles that conflict with Button component */
-.action-btn,
-.action-btn.primary,
-.action-btn.logout-btn,
-.retry-btn,
-.add-asset-btn {
-    /* These are handled by the Button component */
-    display: none; /* Or remove these styles entirely */
-}
-
-/* Update card containers to work with Card component */
-.stat-box,
-.table-container,
-.loading-container,
-.error-container,
-.empty-container,
-.system-status-card {
-    /* These get their glassmorphism from Card component */
-    /* Remove background and border styles */
-    background: none !important;
-    backdrop-filter: none !important;
-    border: none !important;
-}
-
-/* Keep only the specific styles for these elements */
-.stat-box {
-    padding: 0.75rem 1.25rem;
-    min-width: 120px;
-}
-
-.table-container {
-    overflow: hidden;
-}
-
-.loading-container,
-.error-container,
-.empty-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4rem 2rem;
-    text-align: center;
-}
-
-.system-status-card {
-    margin: 0; /* DashboardLayout provides spacing */
-    padding: 1rem;
-}
-
-/* Keep all other styles that don't conflict */
 .registry-header-left {
     flex: 1;
     min-width: 300px;
@@ -109,6 +52,11 @@
     gap: 1rem;
 }
 
+.stat-box {
+    padding: 0.75rem 1.25rem;
+    min-width: 120px;
+}
+
 .stat-label {
     display: block;
     font-size: 0.75rem;
@@ -131,7 +79,7 @@
 
 /* Action Bar */
 .registry-action-bar {
-    padding: 1rem 0; /* Remove horizontal padding */
+    padding: 1rem 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -237,7 +185,11 @@
 /* Data Grid */
 .registry-data-grid {
     flex: 1;
-    padding: 0 0 1rem 0; /* Remove horizontal padding */
+    padding: 0 0 1rem 0;
+    overflow: hidden;
+}
+
+.table-container {
     overflow: hidden;
 }
 
@@ -329,6 +281,7 @@
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 50%;
+    background: #94c73d;
 }
 
 .location-text {
@@ -352,7 +305,39 @@
     border-radius: 50%;
 }
 
-.last-audit {
+.status-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.condition-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.condition-badge.excellent {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.condition-badge.good {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.condition-badge.fair {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.created-date {
     font-size: 0.875rem;
     color: #94a3b8;
 }
@@ -380,7 +365,6 @@
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: 'Manrope', sans-serif;
-    border: none;
 }
 
 .icon-btn:hover {
@@ -396,6 +380,17 @@
 }
 
 /* Loading, Error, Empty States */
+.loading-container,
+.error-container,
+.empty-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
 .loading-spinner {
     width: 3rem;
     height: 3rem;
@@ -425,6 +420,11 @@
 }
 
 /* System Status */
+.system-status-card {
+    margin: 0;
+    padding: 1rem;
+}
+
 .status-header {
     display: flex;
     justify-content: space-between;
