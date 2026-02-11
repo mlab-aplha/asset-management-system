@@ -1,17 +1,18 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import FacilitatorDashboard from '../dashboard/FacilitatorDashboard';
+import DashboardPage from '../../../pages/facilitator/DashboardPage';
 import RequestsPage from '../../../pages/facilitator/RequestsPage';
 import CheckoutPage from '../../../pages/facilitator/CheckoutPage';
 import ReportsPage from '../../../pages/facilitator/ReportsPage';
+import LoginPage from '../../../pages/facilitator/LoginPage';
 import ProtectedRoute from './FacilitatorProtectedRoute';
 
 const FacilitatorRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/facilitator/dashboard" replace />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/dashboard" element={
         <ProtectedRoute>
-          <FacilitatorDashboard />
+          <DashboardPage />
         </ProtectedRoute>
       } />
       <Route path="/requests" element={
@@ -29,6 +30,7 @@ const FacilitatorRoutes = () => {
           <ReportsPage />
         </ProtectedRoute>
       } />
+      <Route path="/" element={<Navigate to="/facilitator/dashboard" replace />} />
     </Routes>
   );
 };
