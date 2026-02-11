@@ -5,9 +5,13 @@ import './layout.css';
 
 interface SidebarProps {
     activePage?: string;
+    userRole?: 'admin' | 'facilitator';
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+    activePage = 'dashboard',
+    userRole = 'admin'
+}) => {
     const navigate = useNavigate();
     const user = AuthService.getCurrentUser();
 
@@ -22,73 +26,72 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) =>
 
     const isActive = (page: string) => activePage === page;
 
+    const facilitatorNavItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/facilitator-dashboard' },
+        { id: 'my-assets', label: 'My Assets', icon: 'inventory_2', path: '/facilitator/assets' },
+        { id: 'asset-requests', label: 'Asset Requests', icon: 'request_quote', path: '/facilitator/requests' },
+        { id: 'issues', label: 'Issue Reports', icon: 'report_problem', path: '/facilitator/issues' },
+    ];
+
+    const adminNavItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
+        { id: 'assets', label: 'Assets', icon: 'inventory_2', path: '/assets' },
+        { id: 'users', label: 'Users', icon: 'people', path: '/users' },
+        { id: 'locations', label: 'Locations', icon: 'location_on', path: '/locations' },
+        { id: 'requests', label: 'Requests', icon: 'request_quote', path: '/admin/requests' },
+    ];
+
+    const navItems = userRole === 'facilitator' ? facilitatorNavItems : adminNavItems;
+
     return (
         <aside className="dashboard-sidebar">
-            <div className="dashboard-logo">
-                <div className="dashboard-logo-icon">
+            <div className="sidebar-logo">
+                <div className="sidebar-logo-icon">
                     <span className="material-icons">query_stats</span>
                 </div>
-                <h1 className="dashboard-logo-text">
-                    mLab <span className="dashboard-logo-accent">AMS</span>
+                <h1 className="sidebar-logo-text">
+                    mLab <span className="sidebar-logo-accent">AMS</span>
                 </h1>
             </div>
 
-            <nav className="dashboard-nav">
-                <button
-                    className={`dashboard-nav-link ${isActive('dashboard') ? 'active' : ''}`}
-                    onClick={() => navigate('/dashboard')}
-                >
-                    <span className="material-icons">dashboard</span>
-                    <span className="dashboard-nav-text">Dashboard</span>
-                </button>
-
-                <button
-                    className={`dashboard-nav-link ${isActive('assets') ? 'active' : ''}`}
-                    onClick={() => navigate('/assets')}
-                >
-                    <span className="material-icons">inventory_2</span>
-                    <span className="dashboard-nav-text">Assets</span>
-                </button>
-
-                <button
-                    className={`dashboard-nav-link ${isActive('users') ? 'active' : ''}`}
-                    onClick={() => navigate('/users')}
-                >
-                    <span className="material-icons">people</span>
-                    <span className="dashboard-nav-text">Users</span>
-                </button>
-
-                <button
-                    className={`dashboard-nav-link ${isActive('locations') ? 'active' : ''}`}
-                    onClick={() => navigate('/locations')}
-                >
-                    <span className="material-icons">location_on</span>
-                    <span className="dashboard-nav-text">Locations</span>
-                </button>
+            <nav className="sidebar-nav">
+                {navItems.map((item) => (
+                    <button
+                        key={item.id}
+                        className={`sidebar-nav-link ${isActive(item.id) ? 'active' : ''}`}
+                        onClick={() => navigate(item.path)}
+                    >
+                        <span className="material-icons">{item.icon}</span>
+                        <span className="sidebar-nav-text">{item.label}</span>
+                        {item.id === 'asset-requests' && (
+                            <span className="notification-badge">3</span>
+                        )}
+                    </button>
+                ))}
 
                 <div className="nav-divider"></div>
 
                 <button
-                    className="dashboard-nav-link logout"
+                    className="sidebar-nav-link logout"
                     onClick={handleLogout}
                 >
                     <span className="material-icons">logout</span>
-                    <span className="dashboard-nav-text">Logout</span>
+                    <span className="sidebar-nav-text">Logout</span>
                 </button>
             </nav>
 
-            <div className="dashboard-user-profile">
-                <div className="dashboard-user-avatar">
-                    <div className="dashboard-avatar-image">
-                        {user?.displayName?.charAt(0) || 'U'}
+            <div className="sidebar-user-profile">
+                <div className="sidebar-user-avatar">
+                    <div className="sidebar-avatar-image">
+                        {user?.displayName?.charAt(0) || 'F'}
                     </div>
                 </div>
-                <div className="dashboard-user-info">
-                    <p className="dashboard-user-name">
-                        {user?.displayName || 'Executive User'}
+                <div className="sidebar-user-info">
+                    <p className="sidebar-user-name">
+                        {user?.displayName || 'Facilitator User'}
                     </p>
-                    <p className="dashboard-user-email">
-                        {user?.email || 'admin@mlab.co.za'}
+                    <p className="sidebar-user-email">
+                        {user?.email || 'facilitator@mlab.co.za'}
                     </p>
                 </div>
             </div>

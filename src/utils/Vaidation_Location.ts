@@ -1,4 +1,4 @@
-import { LocationFormData, BulkImportLocation } from '../../src/core/entities/Location';
+import { LocationFormData, BulkImportLocation } from '../core/entities/Location';
 
 export interface ValidationError {
     field: string;
@@ -26,16 +26,16 @@ export class LocationValidation {
             errors.push({ field: 'name', message: 'Location name is required' });
         }
 
-        if (!formData.address.trim()) {
+        if (!formData.address?.trim()) {
             errors.push({ field: 'address', message: 'Address is required' });
         }
 
-        if (!formData.contactName.trim()) {
+        if (!formData.contactName?.trim()) {
             errors.push({ field: 'contactName', message: 'Contact name is required' });
         }
 
         // Email validation
-        if (!formData.contactEmail.trim()) {
+        if (!formData.contactEmail?.trim()) {
             errors.push({ field: 'contactEmail', message: 'Contact email is required' });
         } else if (!this.isValidEmail(formData.contactEmail)) {
             errors.push({ field: 'contactEmail', message: 'Invalid email format' });
@@ -55,11 +55,11 @@ export class LocationValidation {
 
         // Region validation (optional but recommended)
         if (!formData.region?.trim()) {
-            errors.push({ field: 'region', message: 'Region is required' });
+            errors.push({ field: 'region', message: 'Region is recommended' });
         }
 
         // Number validations
-        if (formData.totalAssets < 0) {
+        if (formData.totalAssets !== undefined && formData.totalAssets < 0) {
             errors.push({ field: 'totalAssets', message: 'Total assets cannot be negative' });
         }
 

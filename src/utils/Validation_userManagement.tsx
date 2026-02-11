@@ -39,9 +39,11 @@ export class UserValidation {
         }
 
         // Status validation
-        const validStatuses = ['active', 'inactive'];
-        if (!validStatuses.includes(formData.status)) {
-            errors.push({ field: 'status', message: 'Invalid status' });
+        if (formData.status) {
+            const validStatuses = ['active', 'inactive'];
+            if (!validStatuses.includes(formData.status)) {
+                errors.push({ field: 'status', message: 'Invalid status' });
+            }
         }
 
         return {

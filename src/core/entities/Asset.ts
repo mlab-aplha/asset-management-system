@@ -1,53 +1,39 @@
 // src/core/entities/Asset.ts
+export type AssetStatus = 'available' | 'assigned' | 'maintenance' | 'retired';
+export type AssetCondition = 'excellent' | 'good' | 'fair' | 'poor';
+
 export interface Asset {
     id: string;
+    assetId: string;
     name: string;
+    type: string;
     category: string;
-    status: 'available' | 'assigned' | 'maintenance' | 'retired';
-    location: string;
+    status: AssetStatus;
+    condition: AssetCondition;
+    currentLocationId: string;
+    createdAt: Date;
+    updatedAt?: Date;
+
+    // Optional fields
+    description?: string;
     serialNumber?: string;
+    manufacturer?: string;
+    model?: string;
     purchaseDate?: Date;
+    purchasePrice?: number;
     value?: number;
     assignedTo?: string;
+    assignmentDate?: Date;
     notes?: string;
-    manufacturer?: string;
-    description?: string;
-    assignedDate?: Date;
-    updatedAt?: Date;
-    createdAt?: Date;
+    tags?: string[];
 }
-
-export type CreateAssetDto = Omit<Asset, 'id'>;
-export type UpdateAssetDto = Partial<CreateAssetDto>;
-
-export enum AssetCategory {
-    HARDWARE = 'hardware',
-    SOFTWARE = 'software',
-    NETWORK = 'network',
-    PERIPHERAL = 'peripheral',
-    SERVER = 'server'
-}
-
-export enum AssetStatus {
-    AVAILABLE = 'available',
-    ASSIGNED = 'assigned',
-    MAINTENANCE = 'maintenance',
-    RETIRED = 'retired',
-    LOST = 'lost'
-}
-
 export enum HubLocation {
-    CPT = 'cape_town',
-    JHB = 'johannesburg',
-    DBN = 'durban',
-    PTA = 'pretoria',
-    BFN = 'bloemfontein'
+    PTA = 'PTA',
+    JHB = 'JHB',
+    CPT = 'CPT',
+    DBN = 'DBN',
+    BFN = 'BFN'
 }
 
-export const HubLabels: Record<HubLocation, string> = {
-    [HubLocation.CPT]: 'Cape Town',
-    [HubLocation.JHB]: 'Johannesburg',
-    [HubLocation.DBN]: 'Durban',
-    [HubLocation.PTA]: 'Pretoria',
-    [HubLocation.BFN]: 'Bloemfontein'
-};
+export type CreateAssetDto = Omit<Asset, 'id' | 'createdAt' | 'updatedAt'>;
+export type UpdateAssetDto = Partial<Omit<Asset, 'id' | 'createdAt' | 'updatedAt'>>;

@@ -1,3 +1,17 @@
+import {
+    collection,
+    query,
+    orderBy,
+    getDocs,
+    getDoc,
+    doc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    where,
+    serverTimestamp
+} from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { User, UserFormData, UserFilters, UserStats } from '../../../src/core/entities/User';
 import { UserValidation } from '../../../src/utils/Validation_userManagement';
 
@@ -12,244 +26,226 @@ export interface IUserService {
     validateUser(data: UserFormData): { isValid: boolean; errors: Record<string, string> };
 }
 
-// Define a type for the raw user data stored in localStorage
-interface StoredUser {
-    id: string;
-    displayName: string;
-    email: string;
-    role: 'admin' | 'facilitator';
-    department?: string;
-    status: 'active' | 'inactive';
-    createdAt?: string;
-    updatedAt?: string;
-}
-
 export class UserService implements IUserService {
-    private static readonly STORAGE_KEY = 'mlab_users';
-    private users: User[];
-
-    constructor() {
-        this.users = this.initializeData();
-    }
-
-    private initializeData(): User[] {
-        const mockData: User[] = [
-            { id: '1', displayName: 'John Smith', email: 'john.smith@mlab.co.za', role: 'admin', department: 'IT', status: 'active', createdAt: new Date('2024-01-15'), updatedAt: new Date('2024-01-15') },
-            { id: '2', displayName: 'Sarah Johnson', email: 'sarah.j@mlab.co.za', role: 'facilitator', department: 'Operations', status: 'active', createdAt: new Date('2024-02-10'), updatedAt: new Date('2024-02-10') },
-            { id: '3', displayName: 'Mike Brown', email: 'mike.b@mlab.co.za', role: 'facilitator', department: 'Sales', status: 'active', createdAt: new Date('2024-02-15'), updatedAt: new Date('2024-02-15') },
-            { id: '4', displayName: 'Lisa Wang', email: 'lisa.w@mlab.co.za', role: 'facilitator', department: 'Marketing', status: 'inactive', createdAt: new Date('2024-03-01'), updatedAt: new Date('2024-03-01') },
-            { id: '5', displayName: 'David Miller', email: 'david.m@mlab.co.za', role: 'facilitator', department: 'Finance', status: 'active', createdAt: new Date('2024-03-05'), updatedAt: new Date('2024-03-05') },
-            { id: '6', displayName: 'Emma Wilson', email: 'emma.w@mlab.co.za', role: 'facilitator', department: 'HR', status: 'active', createdAt: new Date('2024-03-10'), updatedAt: new Date('2024-03-10') },
-            { id: '7', displayName: 'Robert Chen', email: 'robert.c@mlab.co.za', role: 'admin', department: 'IT', status: 'active', createdAt: new Date('2024-03-15'), updatedAt: new Date('2024-03-15') },
-            { id: '8', displayName: 'Maria Garcia', email: 'maria.g@mlab.co.za', role: 'facilitator', department: 'Operations', status: 'inactive', createdAt: new Date('2024-03-20'), updatedAt: new Date('2024-03-20') },
-        ];
-
-        const existingData = this.getStoredData();
-        if (existingData.length === 0) {
-            localStorage.setItem(UserService.STORAGE_KEY, JSON.stringify(mockData));
-            return mockData;
-        }
-        return existingData;
-    }
-
-    private getStoredData(): User[] {
-        try {
-            const data = localStorage.getItem(UserService.STORAGE_KEY);
-            if (!data) return [];
-
-            const storedUsers: StoredUser[] = JSON.parse(data);
-
-            return storedUsers.map((storedUser: StoredUser) => ({
-                id: storedUser.id,
-                displayName: storedUser.displayName,
-                email: storedUser.email,
-                role: storedUser.role,
-                department: storedUser.department,
-                status: storedUser.status,
-                createdAt: storedUser.createdAt ? new Date(storedUser.createdAt) : new Date(),
-                updatedAt: storedUser.updatedAt ? new Date(storedUser.updatedAt) : new Date()
-            }));
-        } catch (error) {
-            console.error('Error reading user data:', error);
-            return [];
-        }
-    }
-
-    private saveData(): void {
-        try {
-            const storedUsers: StoredUser[] = this.users.map(user => ({
-                id: user.id,
-                displayName: user.displayName,
-                email: user.email,
-                role: user.role,
-                department: user.department,
-                status: user.status,
-                createdAt: user.createdAt ? user.createdAt.toISOString() : new Date().toISOString(),
-                updatedAt: user.updatedAt ? user.updatedAt.toISOString() : new Date().toISOString()
-            }));
-
-            localStorage.setItem(UserService.STORAGE_KEY, JSON.stringify(storedUsers));
-        } catch (error) {
-            console.error('Error saving user data:', error);
-        }
-    }
-
-    private generateId(): string {
-        return Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    }
+    private static readonly COLLECTION_NAME = 'users';
 
     async getUsers(filters?: UserFilters): Promise<User[]> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                let filtered = [...this.users];
+        try {
+            const usersRef = collection(db, UserService.COLLECTION_NAME);
+            let q = query(usersRef, orderBy('createdAt', 'desc'));
 
-                if (filters) {
-                    if (filters.searchTerm) {
-                        const term = filters.searchTerm.toLowerCase();
-                        filtered = filtered.filter(user =>
-                            user.displayName.toLowerCase().includes(term) ||
-                            user.email.toLowerCase().includes(term) ||
-                            (user.department && user.department.toLowerCase().includes(term))
-                        );
-                    }
-
-                    if (filters.status && filters.status !== 'all') {
-                        filtered = filtered.filter(user => user.status === filters.status);
-                    }
-
-                    if (filters.role && filters.role !== 'all') {
-                        filtered = filtered.filter(user => user.role === filters.role);
-                    }
-
-                    if (filters.department) {
-                        filtered = filtered.filter(user => user.department === filters.department);
-                    }
+            if (filters) {
+                if (filters.status && filters.status !== 'all') {
+                    q = query(q, where('status', '==', filters.status));
                 }
+                if (filters.role && filters.role !== 'all') {
+                    q = query(q, where('role', '==', filters.role));
+                }
+                if (filters.department) {
+                    q = query(q, where('department', '==', filters.department));
+                }
+            }
 
-                resolve(filtered);
-            }, 500);
-        });
+            const snapshot = await getDocs(q);
+            const users: User[] = [];
+
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                users.push({
+                    id: doc.id,
+                    displayName: data.displayName,
+                    email: data.email,
+                    role: data.role,
+                    department: data.department || '',
+                    status: data.status,
+                    uid: data.uid,
+                    primaryLocationId: data.primaryLocationId,
+                    assignedHubIds: data.assignedHubIds || [],
+                    createdAt: data.createdAt?.toDate() || new Date(),
+                    updatedAt: data.updatedAt?.toDate() || new Date()
+                });
+            });
+
+            // Apply search filter client-side if needed
+            if (filters?.searchTerm) {
+                const term = filters.searchTerm.toLowerCase();
+                return users.filter(user =>
+                    user.displayName?.toLowerCase().includes(term) ||
+                    user.email?.toLowerCase().includes(term) ||
+                    user.department?.toLowerCase().includes(term)
+                );
+            }
+
+            return users;
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            throw new Error('Failed to fetch users');
+        }
     }
 
     async getUserById(id: string): Promise<User | null> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const user = this.users.find(u => u.id === id);
-                resolve(user || null);
-            }, 300);
-        });
+        try {
+            const userRef = doc(db, UserService.COLLECTION_NAME, id);
+            const snapshot = await getDoc(userRef);
+
+            if (!snapshot.exists()) {
+                return null;
+            }
+
+            const data = snapshot.data();
+            return {
+                id: snapshot.id,
+                displayName: data.displayName,
+                email: data.email,
+                role: data.role,
+                department: data.department || '',
+                status: data.status,
+                uid: data.uid,
+                primaryLocationId: data.primaryLocationId,
+                assignedHubIds: data.assignedHubIds || [],
+                createdAt: data.createdAt?.toDate() || new Date(),
+                updatedAt: data.updatedAt?.toDate() || new Date()
+            };
+        } catch (error) {
+            console.error('Error fetching user:', error);
+            throw new Error('Failed to fetch user');
+        }
     }
 
     async createUser(userData: UserFormData): Promise<User> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const newUser: User = {
-                    ...userData,
-                    id: this.generateId(),
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                };
+        try {
+            // Validate user data
+            const validation = this.validateUser(userData);
+            if (!validation.isValid) {
+                throw new Error('User data validation failed');
+            }
 
-                this.users.push(newUser);
-                this.saveData();
-                resolve(newUser);
-            }, 300);
-        });
+            const newUserData = {
+                displayName: userData.displayName,
+                email: userData.email,
+                role: userData.role,
+                department: userData.department || '',
+                status: userData.status || 'active',
+                assignedHubIds: [],
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            };
+
+            const docRef = await addDoc(collection(db, UserService.COLLECTION_NAME), newUserData);
+
+            return {
+                id: docRef.id,
+                ...newUserData,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+        } catch (error) {
+            console.error('Error creating user:', error);
+            throw new Error('Failed to create user');
+        }
     }
 
     async updateUser(id: string, updates: Partial<UserFormData>): Promise<User> {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                const index = this.users.findIndex(u => u.id === id);
+        try {
+            const userRef = doc(db, UserService.COLLECTION_NAME, id);
+            const snapshot = await getDoc(userRef);
 
-                if (index === -1) {
-                    reject(new Error('User not found'));
-                    return;
-                }
+            if (!snapshot.exists()) {
+                throw new Error('User not found');
+            }
 
-                const existingUser = this.users[index];
-                const updatedUser: User = {
-                    ...existingUser,
-                    displayName: updates.displayName ?? existingUser.displayName,
-                    email: updates.email ?? existingUser.email,
-                    role: updates.role ?? existingUser.role,
-                    department: updates.department ?? existingUser.department,
-                    status: updates.status ?? existingUser.status,
-                    updatedAt: new Date()
-                };
+            const updateData = {
+                ...updates,
+                updatedAt: serverTimestamp()
+            };
 
-                this.users[index] = updatedUser;
-                this.saveData();
-                resolve(updatedUser);
-            }, 300);
-        });
+            await updateDoc(userRef, updateData);
+
+            const updatedUser = await this.getUserById(id);
+            if (!updatedUser) {
+                throw new Error('User not found after update');
+            }
+
+            return updatedUser;
+        } catch (error) {
+            console.error('Error updating user:', error);
+            throw new Error('Failed to update user');
+        }
     }
 
     async deleteUser(id: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                const index = this.users.findIndex(u => u.id === id);
+        try {
+            const userRef = doc(db, UserService.COLLECTION_NAME, id);
+            const snapshot = await getDoc(userRef);
 
-                if (index === -1) {
-                    reject(new Error('User not found'));
-                    return;
-                }
+            if (!snapshot.exists()) {
+                throw new Error('User not found');
+            }
 
-                this.users.splice(index, 1);
-                this.saveData();
-                resolve();
-            }, 300);
-        });
+            await deleteDoc(userRef);
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            throw new Error('Failed to delete user');
+        }
     }
 
     async toggleUserStatus(id: string): Promise<User> {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                const index = this.users.findIndex(u => u.id === id);
+        try {
+            const userRef = doc(db, UserService.COLLECTION_NAME, id);
+            const snapshot = await getDoc(userRef);
 
-                if (index === -1) {
-                    reject(new Error('User not found'));
-                    return;
-                }
+            if (!snapshot.exists()) {
+                throw new Error('User not found');
+            }
 
-                const updatedUser: User = {
-                    ...this.users[index],
-                    status: this.users[index].status === 'active' ? 'inactive' : 'active',
-                    updatedAt: new Date()
-                };
+            const data = snapshot.data();
+            const newStatus = data.status === 'active' ? 'inactive' : 'active';
 
-                this.users[index] = updatedUser;
-                this.saveData();
-                resolve(updatedUser);
-            }, 300);
-        });
+            await updateDoc(userRef, {
+                status: newStatus,
+                updatedAt: serverTimestamp()
+            });
+
+            const updatedUser = await this.getUserById(id);
+            if (!updatedUser) {
+                throw new Error('User not found after status update');
+            }
+
+            return updatedUser;
+        } catch (error) {
+            console.error('Error toggling user status:', error);
+            throw new Error('Failed to toggle user status');
+        }
     }
 
     async getUserStats(): Promise<UserStats> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const totalUsers = this.users.length;
-                const activeUsers = this.users.filter(u => u.status === 'active').length;
-                const inactiveUsers = this.users.filter(u => u.status === 'inactive').length;
-                const adminsCount = this.users.filter(u => u.role === 'admin').length;
-                const facilitatorsCount = this.users.filter(u => u.role === 'facilitator').length;
+        try {
+            const users = await this.getUsers();
 
-                const usersByDepartment: Record<string, number> = {};
-                this.users.forEach(user => {
-                    const dept = user.department || 'Unknown';
-                    usersByDepartment[dept] = (usersByDepartment[dept] || 0) + 1;
-                });
+            const totalUsers = users.length;
+            const activeUsers = users.filter(u => u.status === 'active').length;
+            const inactiveUsers = users.filter(u => u.status === 'inactive').length;
+            const adminsCount = users.filter(u => u.role === 'admin').length;
+            const facilitatorsCount = users.filter(u => u.role === 'facilitator').length;
 
-                resolve({
-                    totalUsers,
-                    activeUsers,
-                    inactiveUsers,
-                    adminsCount,
-                    facilitatorsCount,
-                    usersByDepartment
-                });
-            }, 200);
-        });
+            const usersByDepartment: Record<string, number> = {};
+            users.forEach(user => {
+                const dept = user.department || 'Unknown';
+                usersByDepartment[dept] = (usersByDepartment[dept] || 0) + 1;
+            });
+
+            return {
+                totalUsers,
+                activeUsers,
+                inactiveUsers,
+                adminsCount,
+                facilitatorsCount,
+                usersByDepartment
+            };
+        } catch (error) {
+            console.error('Error getting user stats:', error);
+            throw new Error('Failed to get user stats');
+        }
     }
 
     validateUser(data: UserFormData): { isValid: boolean; errors: Record<string, string> } {

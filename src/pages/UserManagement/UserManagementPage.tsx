@@ -11,11 +11,13 @@ import './user-management.css';
 
 export const UserManagementPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+    const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'facilitator'>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [formErrors, setFormErrors] = useState<Record<string, string> | null>(null);
 
     const {
         users,
@@ -35,15 +37,17 @@ export const UserManagementPage: React.FC = () => {
         loadUsers();
     }, [loadUsers]);
 
+    // Apply filters to users
     const filteredUsers = users.filter(user => {
         const matchesSearch = searchTerm === '' ||
-            user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.department?.toLowerCase().includes(searchTerm.toLowerCase());
+            (user.displayName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (user.department?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
         const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+        const matchesRole = roleFilter === 'all' || user.role === roleFilter;
 
-        return matchesSearch && matchesStatus;
+        return matchesSearch && matchesStatus && matchesRole;
     });
 
     const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
@@ -55,12 +59,14 @@ export const UserManagementPage: React.FC = () => {
         setEditingUser(null);
         setIsModalOpen(true);
         setSuccessMessage(null);
+        setFormErrors(null);
     }, []);
 
     const handleEditUser = useCallback((user: User) => {
         setEditingUser(user);
         setIsModalOpen(true);
         setSuccessMessage(null);
+        setFormErrors(null);
     }, []);
 
     const handleDeleteUser = useCallback(async (user: User) => {
@@ -69,6 +75,11 @@ export const UserManagementPage: React.FC = () => {
             if (result.success) {
                 setSuccessMessage(`User "${user.displayName}" deleted successfully!`);
                 setTimeout(() => setSuccessMessage(null), 3000);
+            } else {
+                // Handle the case where errors might not exist
+                const errorMsg = result.errors?.general || 'Unknown error occurred';
+                setSuccessMessage(`Failed to delete user: ${errorMsg}`);
+                setTimeout(() => setSuccessMessage(null), 5000);
             }
         }
     }, [deleteUser]);
@@ -79,10 +90,16 @@ export const UserManagementPage: React.FC = () => {
             const newStatus = user.status === 'active' ? 'inactive' : 'active';
             setSuccessMessage(`User "${user.displayName}" ${newStatus} successfully!`);
             setTimeout(() => setSuccessMessage(null), 3000);
+        } else {
+            const errorMsg = result.errors?.general || 'Unknown error occurred';
+            setSuccessMessage(`Failed to update user status: ${errorMsg}`);
+            setTimeout(() => setSuccessMessage(null), 5000);
         }
     }, [toggleUserStatus]);
 
     const handleSubmitUser = useCallback(async (formData: UserFormData) => {
+        setFormErrors(null);
+
         if (editingUser) {
             const result = await updateUser(editingUser.id, formData);
             if (result.success) {
@@ -90,8 +107,10 @@ export const UserManagementPage: React.FC = () => {
                 setIsModalOpen(false);
                 setTimeout(() => setSuccessMessage(null), 3000);
                 return { success: true };
+            } else {
+                setFormErrors(result.errors || null);
+                return { success: false, errors: result.errors };
             }
-            return result;
         } else {
             const result = await createUser(formData);
             if (result.success) {
@@ -99,10 +118,19 @@ export const UserManagementPage: React.FC = () => {
                 setIsModalOpen(false);
                 setTimeout(() => setSuccessMessage(null), 3000);
                 return { success: true };
+            } else {
+                setFormErrors(result.errors || null);
+                return { success: false, errors: result.errors };
             }
-            return result;
         }
     }, [editingUser, updateUser, createUser]);
+
+    const handleCloseModal = useCallback(() => {
+        setIsModalOpen(false);
+        setEditingUser(null);
+        setSuccessMessage(null);
+        setFormErrors(null);
+    }, []);
 
     const activeUsers = users.filter(u => u.status === 'active').length;
 
@@ -112,17 +140,10 @@ export const UserManagementPage: React.FC = () => {
                 {/* Add/Edit User Modal */}
                 <Modal
                     isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
+                    onClose={handleCloseModal}
                     title={editingUser ? 'Edit User' : 'Add New User'}
                     size="md"
                 >
-                    {successMessage && (
-                        <div className="success-message">
-                            <span className="material-icons">check_circle</span>
-                            {successMessage}
-                        </div>
-                    )}
-
                     <UserForm
                         initialData={editingUser ? {
                             displayName: editingUser.displayName,
@@ -132,9 +153,10 @@ export const UserManagementPage: React.FC = () => {
                             status: editingUser.status
                         } : undefined}
                         onSubmit={handleSubmitUser}
-                        onCancel={() => setIsModalOpen(false)}
+                        onCancel={handleCloseModal}
                         isSubmitting={loading}
                         title={editingUser ? 'Update User' : 'Add User'}
+                        errors={formErrors || undefined} // Convert null to undefined
                     />
                 </Modal>
 
@@ -171,7 +193,10 @@ export const UserManagementPage: React.FC = () => {
                                 type="text"
                                 placeholder="Search users..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="search-input"
                             />
                         </div>
@@ -179,7 +204,10 @@ export const UserManagementPage: React.FC = () => {
                         <div className="filter-chips">
                             <button
                                 className={`filter-chip ${statusFilter === 'all' ? 'active' : ''}`}
-                                onClick={() => setStatusFilter('all')}
+                                onClick={() => {
+                                    setStatusFilter('all');
+                                    setCurrentPage(1);
+                                }}
                             >
                                 <span className="material-icons">filter_list</span>
                                 Status: All
@@ -187,7 +215,10 @@ export const UserManagementPage: React.FC = () => {
                             <Button
                                 variant={statusFilter === 'active' ? 'primary' : 'outline'}
                                 size="sm"
-                                onClick={() => setStatusFilter('active')}
+                                onClick={() => {
+                                    setStatusFilter('active');
+                                    setCurrentPage(1);
+                                }}
                             >
                                 <span className="material-icons status-dot active"></span>
                                 Active
@@ -195,11 +226,27 @@ export const UserManagementPage: React.FC = () => {
                             <Button
                                 variant={statusFilter === 'inactive' ? 'primary' : 'outline'}
                                 size="sm"
-                                onClick={() => setStatusFilter('inactive')}
+                                onClick={() => {
+                                    setStatusFilter('inactive');
+                                    setCurrentPage(1);
+                                }}
                             >
                                 <span className="material-icons status-dot inactive"></span>
                                 Inactive
                             </Button>
+
+                            <select
+                                className="role-filter-select"
+                                value={roleFilter}
+                                onChange={(e) => {
+                                    setRoleFilter(e.target.value as 'all' | 'admin' | 'facilitator');
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <option value="all">All Roles</option>
+                                <option value="admin">Admin</option>
+                                <option value="facilitator">Facilitator</option>
+                            </select>
                         </div>
                     </div>
 
@@ -249,7 +296,7 @@ export const UserManagementPage: React.FC = () => {
                         loading={loading}
                     />
 
-                    {filteredUsers.length > 0 && (
+                    {filteredUsers.length > 0 ? (
                         <div className="pagination-container">
                             <div className="pagination-info">
                                 <span className="pagination-text">
@@ -309,6 +356,11 @@ export const UserManagementPage: React.FC = () => {
                                 />
                             </div>
                         </div>
+                    ) : (
+                        <div className="no-users-message">
+                            <span className="material-icons">people</span>
+                            <p>No users found. {searchTerm ? 'Try a different search term.' : 'Add your first user.'}</p>
+                        </div>
                     )}
                 </Card>
 
@@ -319,7 +371,7 @@ export const UserManagementPage: React.FC = () => {
                         <span className="status-indicator active"></span>
                     </div>
                     <p className="status-message">
-                        All permission systems are operational. Last sync: Today, 10:45 AM
+                        All permission systems are operational. Last sync: {new Date().toLocaleString()}
                     </p>
                 </Card>
             </div>
