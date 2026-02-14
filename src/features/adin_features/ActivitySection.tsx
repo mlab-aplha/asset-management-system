@@ -1,1 +1,1 @@
-export const ActivitySection = () => <div>Activity</div>;
+export const ActivitySection = () => null;

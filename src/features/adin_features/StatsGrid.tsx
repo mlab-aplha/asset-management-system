@@ -1,1 +1,1 @@
-export const StatsGrid = () => <div>Stats</div>;
+export const StatsGrid = () => null;

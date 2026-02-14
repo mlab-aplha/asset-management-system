@@ -1,4 +1,3 @@
-// src/App.tsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/auth/LoginPage';
@@ -19,14 +18,14 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        {/* Protected routes - add PrivateRoute later */}
+        {/* Protected routes - add authentication later */}
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/assets" element={<AssetRegistryPage />} />
         <Route path="/assets/:id" element={<AssetDetailPage />} />
         <Route path="/users" element={<UserManagementPage />} />
         <Route path="/locations" element={<LocationManagementPage />} />
 
-        {/* Fallback */}
+        {/* Redirect any unknown routes to landing page */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

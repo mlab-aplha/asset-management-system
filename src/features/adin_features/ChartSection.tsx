@@ -1,1 +1,1 @@
-export const ChartSection = () => <div>Chart</div>;
+export const ChartSection = () => null;

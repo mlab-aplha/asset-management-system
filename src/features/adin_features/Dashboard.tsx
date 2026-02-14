@@ -1,1 +1,1 @@
-export const DashboardHeader = () => <div>Dashboard</div>;
+export const DashboardHeader = () => null;

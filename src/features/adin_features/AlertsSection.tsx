@@ -1,1 +1,1 @@
-export const AlertsSection = () => <div>Alerts</div>;
+export const AlertsSection = () => null;
