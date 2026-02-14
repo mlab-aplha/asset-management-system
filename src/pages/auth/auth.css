@@ -137,6 +137,7 @@
     0 0 0 1px rgba(148, 199, 61, 0.1);
   position: relative;
   overflow: hidden;
+  animation: fadeIn 0.5s ease-out;
 }
 
 .auth-card::before {
@@ -195,16 +196,20 @@
   flex-shrink: 0;
 }
 
-/* Password Field Wrapper */
+/* Password Field Wrapper - FIXED */
 .password-field-wrapper {
   position: relative;
-  margin-bottom: 0.5rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
+/* Forgot Password Link - FIXED positioning */
 .forgot-password-wrapper {
   position: absolute;
   right: 0;
-  top: -2rem;
+  top: -1.75rem;
 }
 
 .forgot-password-link {
@@ -218,6 +223,8 @@
   transition: all 0.2s ease;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
+  background: transparent;
+  border: none;
 }
 
 .forgot-password-link:hover {
@@ -225,11 +232,40 @@
   background: rgba(148, 199, 61, 0.1);
 }
 
-/* Input Components */
+/* Password Toggle Button - FIXED positioning */
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+  z-index: 2;
+  border-radius: 0.5rem;
+}
+
+.password-toggle-btn:hover {
+  color: var(--lime);
+  background: rgba(148, 199, 61, 0.1);
+}
+
+.password-toggle-btn .material-icons {
+  font-size: 1.25rem;
+}
+
+/* Input Components - FIXED to work with password toggle */
 .input-field {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  width: 100%;
 }
 
 .input-label {
@@ -253,6 +289,7 @@
 
 .input-container {
   position: relative;
+  width: 100%;
 }
 
 .input-icon {
@@ -276,12 +313,17 @@
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0.75rem;
-  padding: 1.125rem 1.125rem 1.125rem 3.25rem;
+  padding: 1.125rem 3.25rem 1.125rem 3.25rem; /* Right padding for toggle button */
   color: white;
   font-size: 1rem;
   font-family: 'Manrope', sans-serif;
   font-weight: 500;
   transition: all 0.2s ease;
+}
+
+/* Special styling for password input to accommodate toggle button */
+.password-field-wrapper .input-element {
+  padding-right: 3.25rem; /* Space for toggle button */
 }
 
 .input-element:focus {
@@ -309,6 +351,7 @@
   padding-left: 0.5rem;
 }
 
+/* Remember Device */
 .remember-device {
   display: flex;
   align-items: center;
@@ -550,6 +593,7 @@
   color: var(--lime);
   background: rgba(148, 199, 61, 0.1);
 }
+
 /* Forgot Password Page Specific */
 .forgot-password-page .auth-card {
   max-width: 36rem;
@@ -630,7 +674,7 @@
   transform: translateX(-4px);
 }
 
-/* Additional Animations */
+/* Animations */
 @keyframes pulse {
   0%, 100% {
     box-shadow: 0 0 0 0 rgba(148, 199, 61, 0.2);
@@ -650,7 +694,7 @@
     opacity: 1;
   }
 }
-/* Animations */
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -659,10 +703,6 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-.auth-card {
-  animation: fadeIn 0.5s ease-out;
 }
 
 /* Responsive */
@@ -702,6 +742,13 @@
     gap: 1rem;
     align-items: center;
   }
+
+  .forgot-password-wrapper {
+    position: relative;
+    top: 0;
+    margin-top: 0.5rem;
+    text-align: right;
+  }
 }
 
 @media (max-width: 480px) {
@@ -728,5 +775,13 @@
   .security-icon {
     width: 2.5rem;
     height: 2.5rem;
+  }
+
+  .input-element {
+    padding: 1rem 3rem 1rem 2.75rem;
+  }
+  
+  .password-toggle-btn {
+    right: 8px;
   }
 }

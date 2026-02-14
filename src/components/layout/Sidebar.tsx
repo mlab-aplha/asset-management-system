@@ -1,23 +1,22 @@
+// src/components/layout/Sidebar.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from '../../../backend-firebase/src/services/AuthService';
+import { useAuth } from '../../hooks/useAuth';
 import './layout.css';
 
 interface SidebarProps {
     activePage?: string;
-    userRole?: 'admin' | 'facilitator';
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-    activePage = 'dashboard',
-    userRole = 'admin'
+    activePage = 'dashboard'
 }) => {
     const navigate = useNavigate();
-    const user = AuthService.getCurrentUser();
+    const { user, signOut, isAdmin, isFacilitator } = useAuth();
 
     const handleLogout = async () => {
         try {
-            await AuthService.logout();
+            await signOut();
             navigate('/login');
         } catch (error) {
             console.error('Logout failed:', error);
@@ -25,13 +24,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
 
     const isActive = (page: string) => activePage === page;
-
-    const facilitatorNavItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/facilitator-dashboard' },
-        { id: 'my-assets', label: 'My Assets', icon: 'inventory_2', path: '/facilitator/assets' },
-        { id: 'asset-requests', label: 'Asset Requests', icon: 'request_quote', path: '/facilitator/requests' },
-        { id: 'issues', label: 'Issue Reports', icon: 'report_problem', path: '/facilitator/issues' },
-    ];
 
     const adminNavItems = [
         { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
@@ -41,7 +33,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: 'requests', label: 'Requests', icon: 'request_quote', path: '/admin/requests' },
     ];
 
-    const navItems = userRole === 'facilitator' ? facilitatorNavItems : adminNavItems;
+    const facilitatorNavItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/FacilitatorDashboard' },
+        { id: 'my-assets', label: 'My Assets', icon: 'inventory_2', path: '/assets' },
+        { id: 'asset-requests', label: 'Asset Requests', icon: 'request_quote', path: '/facilitator/requests' },
+    ];
+
+    const navItems = isAdmin ? adminNavItems : isFacilitator ? facilitatorNavItems : [];
 
     return (
         <aside className="dashboard-sidebar">
@@ -83,15 +81,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="sidebar-user-profile">
                 <div className="sidebar-user-avatar">
                     <div className="sidebar-avatar-image">
-                        {user?.displayName?.charAt(0) || 'F'}
+                        {user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
                     </div>
                 </div>
                 <div className="sidebar-user-info">
                     <p className="sidebar-user-name">
-                        {user?.displayName || 'Facilitator User'}
+                        {user?.displayName || 'User'}
                     </p>
                     <p className="sidebar-user-email">
-                        {user?.email || 'facilitator@mlab.co.za'}
+                        {user?.email || ''}
+                    </p>
+                    <p className="sidebar-user-role">
+                        {user?.role || 'Loading...'}
                     </p>
                 </div>
             </div>

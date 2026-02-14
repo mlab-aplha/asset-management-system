@@ -4,6 +4,7 @@ import { AuthService } from '../../../backend-firebase/src/services/AuthService'
 import type { AuthCredentials } from '../../core/types/auth';
 import { InputField } from '../../components/auth/InputField';
 import { AuthButton } from '../../components/auth/Button';
+import { userService } from '../../../backend-firebase/src/services/UserService';
 
 export const LoginPage: React.FC = () => {
     const navigate = useNavigate();
@@ -14,6 +15,7 @@ export const LoginPage: React.FC = () => {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false); // Add this state
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -21,17 +23,36 @@ export const LoginPage: React.FC = () => {
         setError('');
 
         try {
-            // Pass email and password as separate arguments
             const response = await AuthService.login(credentials.email, credentials.password);
 
-            if (response.success) {
-                navigate('/dashboard');
+            if (response.success && response.user) {
+                const userData = await userService.getUserById(response.user.uid);
+
+                if (userData?.role === 'admin') {
+                    navigate('/dashboard');
+                } else {
+                    navigate('/facilitator/dashboard');
+                }
             } else {
-                setError(response.message || 'Invalid credentials');
+                const errorMessage = response.message || '';
+                if (errorMessage.includes('auth/invalid-credential') ||
+                    errorMessage.includes('auth/user-not-found') ||
+                    errorMessage.includes('auth/wrong-password')) {
+                    setError('Invalid email or password. Please try again.');
+                } else {
+                    setError(response.message || 'Invalid credentials');
+                }
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'An error occurred. Please try again.';
-            setError(errorMessage);
+
+            if (errorMessage.includes('auth/invalid-credential') ||
+                errorMessage.includes('auth/user-not-found') ||
+                errorMessage.includes('auth/wrong-password')) {
+                setError('Invalid email or password. Please try again.');
+            } else {
+                setError(errorMessage);
+            }
             console.error('Login error:', err);
         } finally {
             setLoading(false);
@@ -44,6 +65,10 @@ export const LoginPage: React.FC = () => {
 
     const handleContactAdmin = () => {
         window.location.href = 'mailto:admin@mlab.co.za?subject=AMS%20Account%20Request';
+    };
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
     };
 
     return (
@@ -108,12 +133,23 @@ export const LoginPage: React.FC = () => {
                             <InputField
                                 label="Password"
                                 icon="lock"
-                                type="password"
+                                type={showPassword ? "text" : "password"} // Toggle between text and password
                                 placeholder="******"
                                 value={credentials.password}
                                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                                 required
                             />
+                            {/* Add eye icon button */}
+                            <button
+                                type="button"
+                                className="password-toggle-btn"
+                                onClick={togglePasswordVisibility}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                <span className="material-icons">
+                                    {showPassword ? "visibility_off" : "visibility"}
+                                </span>
+                            </button>
                             <div className="forgot-password-wrapper">
                                 <a className="forgot-password-link" onClick={handleForgotPassword}>
                                     Forgot Password?

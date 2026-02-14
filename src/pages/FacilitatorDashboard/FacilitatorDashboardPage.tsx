@@ -48,6 +48,7 @@ export const FacilitatorDashboardPage: React.FC = () => {
                     <MyAssetsTable onReportIssue={handleReportIssue} />
                 </div>
 
+
                 <div className="facilitator-section">
                     <div className="section-header">
                         <h3>Location/Office Assets</h3>
