@@ -1,0 +1,241 @@
+/* src/pages/AdminRequestsPage/AdminRequestsPage.css */
+
+.admin-requests-container {
+    padding: 2rem;
+    min-height: calc(100vh - 4rem);
+}
+
+/* Header Styles - Match UserManagementPage pattern */
+.admin-requests-header {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.header-left {
+    flex: 1;
+    min-width: 300px;
+}
+
+.page-title {
+    font-size: 2.25rem;
+    font-weight: 900;
+    color: white;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, white 0%, #94c73d 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.page-subtitle {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    font-weight: 500;
+    max-width: 400px;
+}
+
+/* Action Bar - Match UserManagementPage pattern */
+.action-bar {
+    margin-bottom: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.action-bar-left {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    min-width: 300px;
+}
+
+.action-bar-right {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+/* Export and Refresh buttons - styled like UserManagementPage */
+.action-bar-right button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.action-bar-right button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.action-bar-right .export-btn {
+    background: rgba(148, 199, 61, 0.1);
+    border-color: rgba(148, 199, 61, 0.2);
+    color: #94c73d;
+}
+
+.action-bar-right .export-btn:hover {
+    background: rgba(148, 199, 61, 0.2);
+}
+
+/* Table Container - Match UserManagementPage pattern */
+.table-container {
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+/* Loading State */
+.admin-requests-loading {
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.admin-requests-loading .spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid rgba(148, 199, 61, 0.1);
+    border-top-color: #94c73d;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+/* Error State */
+.admin-requests-error {
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.admin-requests-error .material-icons {
+    font-size: 3rem;
+    color: #ef4444;
+    margin-bottom: 1rem;
+}
+
+.admin-requests-error p {
+    color: #f87171;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-requests-error button {
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.admin-requests-error button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Fulfill Modal - Keep this here as it's page-specific */
+.fulfill-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 24, 45, 0.95);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    animation: slideUp 0.3s ease;
+}
+
+/* Modal overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+}
+
+/* Animations */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -30%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-requests-container {
+        padding: 1rem;
+    }
+
+    .admin-requests-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .header-left {
+        min-width: 100%;
+    }
+
+    .action-bar {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .action-bar-left,
+    .action-bar-right {
+        width: 100%;
+    }
+
+    .action-bar-right {
+        justify-content: stretch;
+    }
+
+    .action-bar-right button {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .fulfill-modal {
+        width: 95%;
+        margin: 1rem;
+    }
+}

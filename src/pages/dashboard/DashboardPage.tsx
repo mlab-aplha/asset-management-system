@@ -1,3 +1,4 @@
+// src/pages/dashboard/DashboardPage.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from '../../../backend-firebase/src/services/AuthService';
@@ -5,9 +6,8 @@ import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { DashboardHeader } from '../../features/adin_features/Dashboard';
 import { StatsGrid } from '../../features/adin_features/StatsGrid';
 import { ChartSection } from '../../features/adin_features/ChartSection';
-import { AlertsSection } from '../../features/adin_features/AlertsSection';
+import { RequestsSection } from '../../features/adin_features/RequestsSection';
 import { ActivitySection } from '../../features/adin_features/ActivitySection';
-
 
 export const DashboardPage: React.FC = () => {
     const navigate = useNavigate();
@@ -21,8 +21,17 @@ export const DashboardPage: React.FC = () => {
         }
     };
 
-    const handleNavigation = (path: string) => {
-        navigate(path);
+    // Add these handlers
+    const handleViewAllRequests = () => {
+        navigate('/admin/requests');
+    };
+
+    const handleApproveRequest = (requestId: string) => {
+        navigate(`/admin/requests/${requestId}/approve`);
+    };
+
+    const handleRejectRequest = (requestId: string) => {
+        navigate(`/admin/requests/${requestId}/reject`);
     };
 
     return (
@@ -39,7 +48,11 @@ export const DashboardPage: React.FC = () => {
                 <ChartSection />
 
                 <div className="dashboard-right-sidebar">
-                    <AlertsSection onViewAll={() => handleNavigation('/alerts')} />
+                    <RequestsSection
+                        onViewAll={handleViewAllRequests}
+                        onApprove={handleApproveRequest}
+                        onReject={handleRejectRequest}
+                    />
                     <ActivitySection />
                 </div>
             </div>

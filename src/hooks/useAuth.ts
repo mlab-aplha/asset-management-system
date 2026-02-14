@@ -1,39 +1,49 @@
+// src/hooks/useAuth.ts
 import { useState, useEffect } from 'react';
-import { User } from 'firebase/auth';
-import { authService } from '../../backend-firebase/src/firebase/services';
+import { AuthService } from '../../backend-firebase/src/services/AuthService';
+import { userService } from '../../backend-firebase/src/services/UserService';
+import { User } from '../core/entities/User';
 
+// Make sure this is exported
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial user
-    authService.getCurrentUser().then((user) => {
-      setUser(user);
-      setLoading(false);
-    });
+    const initAuth = async () => {
+      const firebaseUser = AuthService.getCurrentUser();
 
-    // Listen for auth changes
-    const unsubscribe = authService.onAuthStateChange((user) => {
-      setUser(user);
+      if (firebaseUser) {
+        try {
+          const userData = await userService.getUserById(firebaseUser.uid);
+          setUser(userData);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
       setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    initAuth();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const result = await authService.signIn(email, password);
-    return result;
-  };
-
-  const signUp = async (email: string, password: string) => {
-    const result = await authService.signUp(email, password);
+    const result = await AuthService.login(email, password);
+    if (result.success && result.user) {
+      const userData = await userService.getUserById(result.user.uid);
+      setUser(userData);
+    }
     return result;
   };
 
   const signOut = async () => {
-    const result = await authService.signOut();
+    const result = await AuthService.logout();
+    if (result.success) {
+      setUser(null);
+    }
     return result;
   };
 
@@ -41,8 +51,12 @@ export const useAuth = () => {
     user,
     loading,
     signIn,
-    signUp,
     signOut,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    isAdmin: user?.role === 'admin',
+    isFacilitator: user?.role === 'facilitator'
   };
 };
+
+// Also export as default if you want
+export default useAuth;

@@ -1,7 +1,9 @@
-// src/components/requests/RequestsSection.tsx
+// src/features/adin_features/RequestsSection.tsx
 import React from 'react';
-import { usePendingRequests } from '../../hooks/usePendingRequests';
+import { useRequests } from '../../hooks/useRequests';
 import { useAuth } from '../../hooks/useAuth';
+import { AssetRequest, RequestItem } from '../../../backend-firebase/src/services/RequestService';
+import { Timestamp, FieldValue } from 'firebase/firestore';
 import './dashboard.css';
 
 interface RequestsSectionProps {
@@ -15,15 +17,20 @@ export const RequestsSection: React.FC<RequestsSectionProps> = ({
     onApprove,
     onReject
 }) => {
-    const { pendingRequests, loading, count, refresh } = usePendingRequests();
+    const { pendingRequests, loading, count } = useRequests();
     const { isAdmin } = useAuth();
 
-    // Format timestamp to relative time
-    const getRelativeTime = (timestamp: any): string => {
+    // Format timestamp to relative time - handles Firebase Timestamp, Date, and FieldValue
+    const getRelativeTime = (timestamp: Timestamp | Date | FieldValue | null | undefined): string => {
         if (!timestamp) return 'Unknown';
 
+        // If it's a FieldValue (serverTimestamp), it's still being processed
+        if (timestamp instanceof FieldValue) {
+            return 'Just now';
+        }
+
         let date: Date;
-        if (timestamp?.toDate) {
+        if (timestamp instanceof Timestamp) {
             date = timestamp.toDate();
         } else if (timestamp instanceof Date) {
             date = timestamp;
@@ -46,7 +53,7 @@ export const RequestsSection: React.FC<RequestsSectionProps> = ({
     };
 
     // Get urgency color
-    const getUrgencyClass = (priority: string) => {
+    const getUrgencyClass = (priority: string = 'medium'): string => {
         switch (priority) {
             case 'urgent': return 'alert-indicator urgent';
             case 'high': return 'alert-indicator high';
@@ -55,8 +62,8 @@ export const RequestsSection: React.FC<RequestsSectionProps> = ({
         }
     };
 
-    // Format item summary
-    const getItemSummary = (items: any[]): string => {
+    // Format item summary with proper typing
+    const getItemSummary = (items: RequestItem[] = []): string => {
         if (!items || items.length === 0) return 'No items';
 
         const totalQty = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -110,7 +117,7 @@ export const RequestsSection: React.FC<RequestsSectionProps> = ({
                         </div>
                     </div>
                 ) : (
-                    pendingRequests.slice(0, 3).map((request) => (
+                    pendingRequests.slice(0, 3).map((request: AssetRequest) => (
                         <div key={request.id} className="alert-item">
                             <div className={getUrgencyClass(request.priority)}></div>
                             <div className="alert-content">

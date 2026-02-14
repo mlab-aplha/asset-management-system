@@ -1,0 +1,301 @@
+/* src/features/shared/request-priority-badge.css */
+
+/* Base Priority Badge Styles */
+.request-priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.875rem;
+    border-radius: 100px;
+    font-size: 0.6875rem;
+    font-weight: 800;
+    line-height: 1.4;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    width: fit-content;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.request-priority-badge .material-icons,
+.request-priority-badge .material-symbols-outlined {
+    font-size: 1rem;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
+
+/* Priority Colors - Following your design patterns */
+
+/* Urgent Priority */
+.request-priority-badge.urgent {
+    background: rgba(220, 38, 38, 0.15);
+    color: #f87171;
+    border-color: rgba(220, 38, 38, 0.3);
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+    animation: urgent-pulse 2s infinite;
+}
+
+.request-priority-badge.urgent .material-icons {
+    color: #f87171;
+}
+
+.request-priority-badge.urgent::before {
+    content: '';
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #ef4444;
+    margin-right: 0.375rem;
+    animation: blink 1s infinite;
+}
+
+/* High Priority */
+.request-priority-badge.high {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.3);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
+}
+
+.request-priority-badge.high .material-icons {
+    color: #fbbf24;
+}
+
+.request-priority-badge.high::before {
+    content: '';
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #f59e0b;
+    margin-right: 0.375rem;
+}
+
+/* Medium Priority */
+.request-priority-badge.medium {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.request-priority-badge.medium .material-icons {
+    color: #60a5fa;
+}
+
+.request-priority-badge.medium::before {
+    content: '';
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #3b82f6;
+    margin-right: 0.375rem;
+}
+
+/* Low Priority */
+.request-priority-badge.low {
+    background: rgba(100, 116, 139, 0.15);
+    color: #94a3b8;
+    border-color: rgba(100, 116, 139, 0.3);
+    box-shadow: 0 2px 8px rgba(100, 116, 139, 0.1);
+}
+
+.request-priority-badge.low .material-icons {
+    color: #94a3b8;
+}
+
+.request-priority-badge.low::before {
+    content: '';
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #6b7280;
+    margin-right: 0.375rem;
+}
+
+/* Critical Priority (Special) */
+.request-priority-badge.critical {
+    background: rgba(139, 92, 246, 0.15);
+    color: #c084fc;
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 2px 12px rgba(139, 92, 246, 0.2);
+    animation: critical-pulse 1.5s infinite;
+    font-weight: 900;
+}
+
+.request-priority-badge.critical .material-icons {
+    color: #c084fc;
+}
+
+.request-priority-badge.critical::before {
+    content: '⚠️';
+    font-size: 0.75rem;
+    margin-right: 0.375rem;
+}
+
+/* Badge Sizes */
+.request-priority-badge.small {
+    padding: 0.1875rem 0.625rem;
+    font-size: 0.5625rem;
+    gap: 0.25rem;
+}
+
+.request-priority-badge.small .material-icons {
+    font-size: 0.75rem;
+}
+
+.request-priority-badge.small::before {
+    width: 0.375rem;
+    height: 0.375rem;
+}
+
+.request-priority-badge.medium {
+    padding: 0.25rem 0.875rem;
+    font-size: 0.6875rem;
+}
+
+.request-priority-badge.large {
+    padding: 0.375rem 1.125rem;
+    font-size: 0.8125rem;
+    gap: 0.5rem;
+}
+
+.request-priority-badge.large .material-icons {
+    font-size: 1.125rem;
+}
+
+.request-priority-badge.large::before {
+    width: 0.625rem;
+    height: 0.625rem;
+}
+
+/* Icon Only Variant */
+.request-priority-badge.icon-only {
+    padding: 0.375rem;
+    border-radius: 50%;
+}
+
+.request-priority-badge.icon-only::before {
+    display: none;
+}
+
+.request-priority-badge.icon-only.small {
+    padding: 0.25rem;
+}
+
+.request-priority-badge.icon-only.large {
+    padding: 0.5rem;
+}
+
+/* Glass Variant */
+.request-priority-badge.glass {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.request-priority-badge.glass.urgent {
+    background: rgba(220, 38, 38, 0.05);
+}
+
+.request-priority-badge.glass.high {
+    background: rgba(245, 158, 11, 0.05);
+}
+
+/* Interactive */
+.request-priority-badge.interactive {
+    cursor: pointer;
+}
+
+.request-priority-badge.interactive:hover {
+    transform: translateY(-2px) scale(1.05);
+    filter: brightness(1.1);
+}
+
+/* With Arrow Indicator */
+.request-priority-badge.with-arrow {
+    position: relative;
+    padding-right: 2rem;
+}
+
+.request-priority-badge.with-arrow::after {
+    content: 'arrow_forward';
+    font-family: 'Material Icons';
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    opacity: 0.5;
+}
+
+/* Priority Change Indicator */
+.request-priority-badge.increased {
+    border-left: 3px solid #ef4444;
+}
+
+.request-priority-badge.decreased {
+    border-left: 3px solid #10b981;
+}
+
+/* Animations */
+@keyframes urgent-pulse {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(220, 38, 38, 0.4);
+    }
+}
+
+@keyframes critical-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(1.02);
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+    }
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .request-priority-badge {
+        padding: 0.1875rem 0.75rem;
+        font-size: 0.625rem;
+    }
+    
+    .request-priority-badge.large {
+        padding: 0.3125rem 1rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .request-priority-badge {
+        border: 1px solid #000 !important;
+        background: none !important;
+        color: #000 !important;
+    }
+    
+    .request-priority-badge::before,
+    .request-priority-badge .material-icons {
+        display: none !important;
+    }
+}
