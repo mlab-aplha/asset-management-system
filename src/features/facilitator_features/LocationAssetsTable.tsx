@@ -1,134 +1,130 @@
-import React from 'react';
-import { Button } from '../../components/ui/Button';
-import './facilitator-styles.css';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../backend-firebase/src/firebase/config';
 
 interface LocationAsset {
     id: string;
     name: string;
-    serialNumber: string;
-    assetNumber: string;
-    location: string;
-    status: 'in-use' | 'available' | 'maintenance';
-    assignedTo: string;
-    facility: string;
+    category: string;
+    status: string;
+    condition: string;
 }
 
-interface LocationAssetsTableProps {
-    onReportIssue: (assetId: string) => void;
-}
+export const LocationAssetsTable: React.FC = () => {
+    const { user } = useAuth();
+    const [locationName, setLocationName] = useState('');
+    const [assets, setAssets] = useState<LocationAsset[]>([]);
+    const [loading, setLoading] = useState(true);
 
-export const LocationAssetsTable: React.FC<LocationAssetsTableProps> = ({ onReportIssue }) => {
-    const assets: LocationAsset[] = [
-        {
-            id: '1',
-            name: 'Sony Alpha A7 IV',
-            serialNumber: 'SN-77344-',
-            assetNumber: 'SNY',
-            location: 'Camera Room B',
-            status: 'in-use',
-            assignedTo: 'Sarah Jenkins',
-            facility: 'Sarah Jenkins'
-        },
-        {
-            id: '2',
-            name: 'HP LaserJet Enterprise',
-            serialNumber: 'SN-12903-',
-            assetNumber: 'HPP',
-            location: '2nd Floor Common Area',
-            status: 'available',
-            assignedTo: 'Shared Asset',
-            facility: 'Managed'
-        },
-        {
-            id: '3',
-            name: 'Poly Studio X50',
-            serialNumber: 'SN-44510-',
-            assetNumber: 'PLY',
-            location: 'Conference Room "Golden Gate"',
-            status: 'maintenance',
-            assignedTo: 'Shared Asset',
-            facility: 'Managed'
-        }
-    ];
+    useEffect(() => {
+        const fetchLocationAndAssets = async () => {
+            if (!user) return;
 
-    const getStatusBadge = (status: LocationAsset['status']) => {
-        switch (status) {
-            case 'in-use':
-                return <span className="status-badge in-use">In Use</span>;
-            case 'available':
-                return <span className="status-badge available">Available</span>;
-            case 'maintenance':
-                return <span className="status-badge maintenance">Maintenance</span>;
+            try {
+                // 1. Get user's assigned location from user document
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                const userData = userDoc.data();
+                const locationId = userData?.primaryLocationId;
+
+                if (locationId) {
+                    // 2. Get location name
+                    const locationDoc = await getDoc(doc(db, 'locations', locationId));
+                    setLocationName(locationDoc.data()?.name || 'Unknown Location');
+
+                    // 3. Get all assets at this location
+                    const assetsQuery = query(
+                        collection(db, 'assets'),
+                        where('currentLocationId', '==', locationId)
+                    );
+                    const assetsSnapshot = await getDocs(assetsQuery);
+                    const assetsData = assetsSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    })) as LocationAsset[];
+                    
+                    setAssets(assetsData);
+                }
+            } catch (error) {
+                console.error('Error fetching location assets:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchLocationAndAssets();
+    }, [user]);
+
+    const getStatusColor = (status: string) => {
+        switch(status) {
+            case 'available': return '#10b981';
+            case 'assigned': return '#3b82f6';
+            case 'maintenance': return '#f59e0b';
+            default: return '#666';
         }
     };
 
+    if (loading) return <div>Loading location assets...</div>;
+
     return (
-        <div className="assets-table">
-            <div className="table-header">
-                <div className="table-row header-row">
-                    <div className="table-cell">ASSET</div>
-                    <div className="table-cell">ASSET NAME</div>
-                    <div className="table-cell">SERIAL</div>
-                    <div className="table-cell">NUMBER</div>
-                    <div className="table-cell">ASSIGNED TO</div>
-                    <div className="table-cell">FACILITY</div>
-                    <div className="table-cell">STATUS</div>
-                    <div className="table-cell">ACTIONS</div>
-                </div>
+        <div>
+            {/* Location Header */}
+            <div style={{
+                backgroundColor: '#f0f7ff',
+                padding: '15px',
+                borderRadius: '8px',
+                marginBottom: '20px',
+                border: '1px solid #3b82f6'
+            }}>
+                <h3 style={{ margin: '0 0 5px 0', color: '#3b82f6' }}>
+                    📍 Your Location: {locationName || 'No location assigned'}
+                </h3>
+                <p style={{ margin: 0, color: '#666' }}>
+                    Total assets at this location: {assets.length}
+                </p>
             </div>
 
-            <div className="table-body">
-                {assets.map((asset) => (
-                    <div key={asset.id} className="table-row">
-                        <div className="table-cell asset-icon">
-                            <span className="material-icons">
-                                {asset.name.includes('Camera') ? 'photo_camera' :
-                                    asset.name.includes('HP') ? 'print' :
-                                        'video_camera_front'}
-                            </span>
+            {/* Assets Table */}
+            {assets.length === 0 ? (
+                <p>No assets found at your location</p>
+            ) : (
+                <div>
+                    {assets.map(asset => (
+                        <div key={asset.id} style={{
+                            padding: '15px',
+                            border: '1px solid #ddd',
+                            marginBottom: '10px',
+                            borderRadius: '8px',
+                            backgroundColor: '#fff',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <div>
+                                <h4 style={{ margin: '0 0 5px 0' }}>{asset.name}</h4>
+                                <p style={{ margin: '0 0 5px 0', color: '#666' }}>
+                                    Category: {asset.category}
+                                </p>
+                                <p style={{ margin: 0, color: '#666', fontSize: '13px' }}>
+                                    Condition: {asset.condition}
+                                </p>
+                            </div>
+                            <div>
+                                <span style={{
+                                    padding: '4px 12px',
+                                    borderRadius: '20px',
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    backgroundColor: getStatusColor(asset.status) + '20',
+                                    color: getStatusColor(asset.status)
+                                }}>
+                                    {asset.status}
+                                </span>
+                            </div>
                         </div>
-                        <div className="table-cell asset-info">
-                            <div className="asset-name">{asset.name}</div>
-                            <div className="asset-location">{asset.location}</div>
-                        </div>
-                        <div className="table-cell serial-number">
-                            {asset.serialNumber}
-                        </div>
-                        <div className="table-cell asset-number">
-                            {asset.assetNumber}
-                        </div>
-                        <div className="table-cell assigned-to">
-                            {asset.assignedTo}
-                        </div>
-                        <div className="table-cell facility">
-                            {asset.facility}
-                        </div>
-                        <div className="table-cell status">
-                            {getStatusBadge(asset.status)}
-                        </div>
-                        <div className="table-cell actions">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                icon="report"
-                                onClick={() => onReportIssue(asset.id)}
-                            >
-                                Report Issue
-                            </Button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="table-footer">
-                <div className="pagination-info">
-                    Showing 3 of 84 assets at this location
+                    ))}
                 </div>
-                <div className="pagination-controls">
-                    <Button variant="secondary" size="sm">Previous</Button>
-                    <Button variant="secondary" size="sm">Next</Button>
-                </div>
-            </div>
+            )}
         </div>
     );
 };

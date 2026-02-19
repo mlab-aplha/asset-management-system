@@ -1,188 +1,231 @@
-import React from 'react';
-import { Button } from '../../components/ui/Button';
-import './asset-requests-styles.css';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../../backend-firebase/src/firebase/config';
 
-interface Asset {
-    id: string;
-    name: string;
-    assetId: string;
-    category: string;
-    location: string;
-    status: 'available' | 'in-use' | 'maintenance';
-    icon: string;
-}
+export const AssetRequestsTable: React.FC = () => {
+    const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [category, setCategory] = useState('All Categories');
+    const [location, setLocation] = useState('All Locations');
+    const [sort, setSort] = useState('Sort by');
 
-interface AssetRequestsTableProps {
-    onRequestAsset: (assetId: string) => void;
-    onViewDetails: (assetId: string) => void;
-}
-
-export const AssetRequestsTable: React.FC<AssetRequestsTableProps> = ({
-    onRequestAsset,
-    onViewDetails
-}) => {
-    const assets: Asset[] = [
-        {
-            id: '1',
-            name: 'Macbook Pro M2 - 14"',
-            assetId: 'AST-88219',
-            category: 'Computing',
-            location: 'HQ - Floor 4',
-            status: 'available',
-            icon: 'laptop_mac'
-        },
-        {
-            id: '2',
-            name: 'Epson 4K Projector',
-            assetId: 'AV-55201',
-            category: 'AV Equipment',
-            location: 'Main Conference',
-            status: 'maintenance',
-            icon: 'videocam'
-        },
-        {
-            id: '3',
-            name: 'Herman Miller Aeron',
-            assetId: 'FUR-10293',
-            category: 'Furniture',
-            location: 'West Wing - R402',
-            status: 'in-use',
-            icon: 'chair'
-        },
-        {
-            id: '4',
-            name: 'Sony Alpha A7 IV',
-            assetId: 'CAM-44910',
-            category: 'Photography',
-            location: 'Studio B',
-            status: 'available',
-            icon: 'photo_camera'
-        }
+    const assets = [
+        { id: '1', name: 'Macbook Pro M2 - 14"', icon: '💻', color: '#3b82f6', category: 'Computing', location: 'HQ - Floor 4', status: 'Available' },
+        { id: '2', name: 'Dell XPS 15', icon: '💻', color: '#3b82f6', category: 'Computing', location: 'HQ - Floor 4', status: 'Available' },
+        { id: '3', name: 'Herman Miller Aerop', icon: '🪑', color: '#10b981', category: 'Furniture', location: 'West Wing - R402', status: 'In Use' },
+        { id: '4', name: 'Epson 4K Projector', icon: '📽️', color: '#f59e0b', category: 'AV Equipment', location: 'Main Conference', status: 'Maintenance' },
+        { id: '5', name: 'Sony Alpha A7R IV', icon: '📷', color: '#ef4444', category: 'Photography', location: 'Studio B', status: 'Available' },
+        { id: '6', name: 'Logitech MX Master 3', icon: '🖱️', color: '#10b981', category: 'Computing', location: 'West Wing - R402', status: 'Available' }
     ];
 
-    const getStatusBadge = (status: Asset['status']) => {
-        switch (status) {
-            case 'available':
-                return (
-                    <div className="status-badge available">
-                        <span className="material-icons">check_circle</span>
-                        <span>Available</span>
-                    </div>
-                );
-            case 'in-use':
-                return (
-                    <div className="status-badge in-use">
-                        <span className="material-icons">schedule</span>
-                        <span>In Use</span>
-                    </div>
-                );
-            case 'maintenance':
-                return (
-                    <div className="status-badge maintenance">
-                        <span className="material-icons">build</span>
-                        <span>Maintenance</span>
-                    </div>
-                );
+    const categories = ['All Categories', 'Computing', 'Furniture', 'AV Equipment', 'Photography'];
+    const locations = ['All Locations', 'HQ - Floor 4', 'West Wing - R402', 'Main Conference', 'Studio B'];
+    const sortOptions = ['Sort by', 'Name (A-Z)', 'Name (Z-A)', 'Status', 'Category', 'Location'];
+
+    useEffect(() => {
+        setTimeout(() => setLoading(false), 2000);
+    }, []);
+
+    // Filter assets
+    const filtered = assets.filter(a => {
+        const matchSearch = search === '' || a.name.toLowerCase().includes(search.toLowerCase());
+        const matchCategory = category === 'All Categories' || a.category === category;
+        const matchLocation = location === 'All Locations' || a.location === location;
+        return matchSearch && matchCategory && matchLocation;
+    });
+
+    // Sort assets
+    const sorted = [...filtered].sort((a, b) => {
+        if (sort === 'Name (A-Z)') return a.name.localeCompare(b.name);
+        if (sort === 'Name (Z-A)') return b.name.localeCompare(a.name);
+        if (sort === 'Category') return a.category.localeCompare(b.category);
+        if (sort === 'Location') return a.location.localeCompare(b.location);
+        if (sort === 'Status') return a.status.localeCompare(b.status);
+        return 0;
+    });
+
+    const handleRequest = async (asset: any) => {
+        if (!user) return alert('Please login');
+        try {
+            await addDoc(collection(db, 'requests'), {
+                assetId: asset.id, assetName: asset.name, assetCategory: asset.category,
+                requesterId: user.uid, requesterName: user.email, status: 'pending',
+                requestDate: serverTimestamp()
+            });
+            alert(`✅ Requested ${asset.name}`);
+        } catch (error) {
+            alert('Failed to submit request');
         }
     };
 
-    const getCategoryIcon = (category: string) => {
-        switch (category) {
-            case 'Computing':
-                return 'laptop_mac';
-            case 'AV Equipment':
-                return 'videocam';
-            case 'Photography':
-                return 'photo_camera';
-            case 'Furniture':
-                return 'chair';
-            default:
-                return 'devices';
-        }
+    const getStatusColor = (status: string) => {
+        if (status === 'Available') return '#10b981';
+        if (status === 'In Use') return '#3b82f6';
+        if (status === 'Maintenance') return '#f59e0b';
+        return '#666';
     };
+
+    if (loading) {
+        return (
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+                <div style={{ width: '40px', height: '40px', border: '3px solid #f0f0f0', borderTopColor: '#000', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 20px' }}></div>
+                <div style={{ color: '#333' }}>Loading assets...</div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        );
+    }
 
     return (
-        <div className="asset-requests-table-container">
-            <div className="table-card">
-                <div className="table-header">
-                    <div className="table-row header-row">
-                        <div className="table-cell asset-col">ASSET</div>
-                        <div className="table-cell name-col">ASSET NAME</div>
-                        <div className="table-cell category-col">CATEGORY</div>
-                        <div className="table-cell location-col">LOCATION</div>
-                        <div className="table-cell status-col">STATUS</div>
-                        <div className="table-cell action-col">ACTION</div>
+        <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '20px', color: '#000' }}>Asset Requests</h1>
+
+            {/* Filter Row */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                {/* Search */}
+                <div style={{ flex: 2, minWidth: '250px' }}>
+                    <div style={{ display: 'flex', border: '1px solid #ddd', borderRadius: '5px', padding: '0 10px', background: '#fff' }}>
+                        <span style={{ padding: '10px 5px', color: '#666' }}>🔍</span>
+                        <input 
+                            placeholder="Search assets..." 
+                            value={search} 
+                            onChange={e => setSearch(e.target.value)} 
+                            style={{ width: '100%', padding: '10px', border: 'none', outline: 'none', color: '#333' }}
+                        />
                     </div>
                 </div>
 
-                <div className="table-body">
-                    {assets.map((asset) => (
-                        <div key={asset.id} className="table-row">
-                            <div className="table-cell asset-col">
-                                <div className="asset-icon-wrapper">
-                                    <span className="material-icons">
-                                        {getCategoryIcon(asset.category)}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="table-cell name-col">
-                                <div className="asset-name-info">
-                                    <h4 className="asset-name">{asset.name}</h4>
-                                    <p className="asset-id">ID: {asset.assetId}</p>
-                                </div>
-                            </div>
-                            <div className="table-cell category-col">
-                                <span className="category-text">{asset.category}</span>
-                            </div>
-                            <div className="table-cell location-col">
-                                <span className="location-text">{asset.location}</span>
-                            </div>
-                            <div className="table-cell status-col">
-                                {getStatusBadge(asset.status)}
-                            </div>
-                            <div className="table-cell action-col">
-                                <Button
-                                    variant="primary"
-                                    size="md"
-                                    onClick={() => onRequestAsset(asset.id)}
-                                    className="request-btn"
-                                >
-                                    Request
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => onViewDetails(asset.id)}
-                                    className="details-btn"
-                                >
-                                    Details
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
+                {/* Category Filter */}
+                <div style={{ flex: 1, minWidth: '150px' }}>
+                    <select 
+                        value={category} 
+                        onChange={e => setCategory(e.target.value)} 
+                        style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', background: '#fff', color: '#333' }}
+                    >
+                        {categories.map(c => <option key={c} style={{ color: '#333' }}>{c}</option>)}
+                    </select>
                 </div>
 
-                <div className="table-footer">
-                    <div className="pagination-info">
-                        Showing 1 to 10 of 42 assets
-                    </div>
-                    <div className="pagination-controls">
-                        <button className="pagination-btn">
-                            <span className="material-icons">chevron_left</span>
-                        </button>
-                        <div className="pagination-numbers">
-                            <button className="page-number active">1</button>
-                            <button className="page-number">2</button>
-                            <button className="page-number">3</button>
-                            <span className="page-dots">...</span>
-                            <button className="page-number">5</button>
-                        </div>
-                        <button className="pagination-btn">
-                            <span className="material-icons">chevron_right</span>
-                        </button>
-                    </div>
+                {/* Location Filter */}
+                <div style={{ flex: 1, minWidth: '150px' }}>
+                    <select 
+                        value={location} 
+                        onChange={e => setLocation(e.target.value)} 
+                        style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', background: '#fff', color: '#333' }}
+                    >
+                        {locations.map(l => <option key={l} style={{ color: '#333' }}>{l}</option>)}
+                    </select>
+                </div>
+
+                {/* Sort */}
+                <div style={{ flex: 1, minWidth: '130px' }}>
+                    <select 
+                        value={sort} 
+                        onChange={e => setSort(e.target.value)} 
+                        style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', background: '#fff', color: '#333' }}
+                    >
+                        {sortOptions.map(s => <option key={s} style={{ color: '#333' }}>{s}</option>)}
+                    </select>
                 </div>
             </div>
+
+            {/* Results count */}
+            <div style={{ marginBottom: '15px', color: '#666' }}>
+                Showing <span style={{ color: '#333', fontWeight: 'bold' }}>{sorted.length}</span> of {assets.length} assets
+            </div>
+
+            {/* Table Header */}
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '50px 2fr 1fr 1.5fr 1fr 80px', 
+                gap: '10px', 
+                padding: '12px 10px', 
+                background: '#f5f5f5', 
+                fontWeight: 'bold',
+                borderRadius: '5px',
+                marginBottom: '5px',
+                color: '#333'
+            }}>
+                <div></div>
+                <div>ASSET NAME</div>
+                <div>CATEGORY</div>
+                <div>LOCATION</div>
+                <div>STATUS</div>
+                <div>ACTION</div>
+            </div>
+
+            {/* Asset Rows */}
+            {sorted.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', background: '#f9f9f9', borderRadius: '5px', color: '#666' }}>
+                    No assets match your filters
+                </div>
+            ) : (
+                sorted.map(asset => (
+                    <div key={asset.id} style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: '50px 2fr 1fr 1.5fr 1fr 80px', 
+                        gap: '10px', 
+                        padding: '10px', 
+                        border: '1px solid #ddd', 
+                        marginTop: '5px', 
+                        borderRadius: '5px',
+                        background: '#fff',
+                        alignItems: 'center'
+                    }}>
+                        <div style={{ 
+                            background: asset.color, 
+                            width: '35px', 
+                            height: '35px', 
+                            borderRadius: '5px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            color: 'white',
+                            fontSize: '18px'
+                        }}>
+                            {asset.icon}
+                        </div>
+                        <div style={{ color: '#333', fontWeight: '500' }}>{asset.name}</div>
+                        <div style={{ color: '#666' }}>{asset.category}</div>
+                        <div style={{ color: '#666' }}>{asset.location}</div>
+                        <div>
+                            <span style={{ 
+                                background: getStatusColor(asset.status) + '20', 
+                                color: getStatusColor(asset.status), 
+                                padding: '4px 12px', 
+                                borderRadius: '20px',
+                                fontSize: '13px',
+                                fontWeight: '500'
+                            }}>
+                                {asset.status}
+                            </span>
+                        </div>
+                        <div>
+                            <button 
+                                onClick={() => handleRequest(asset)} 
+                                style={{ 
+                                    background: '#000', 
+                                    color: '#fff', 
+                                    border: 'none', 
+                                    padding: '8px 12px', 
+                                    borderRadius: '4px', 
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    fontSize: '13px',
+                                    fontWeight: '500'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = '#000'}
+                            >
+                                Request
+                            </button>
+                        </div>
+                    </div>
+                ))
+            )}
         </div>
     );
 };
+
+export default AssetRequestsTable;

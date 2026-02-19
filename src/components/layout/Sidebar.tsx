@@ -1,4 +1,3 @@
-// src/components/layout/Sidebar.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -36,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const facilitatorNavItems = [
         { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/FacilitatorDashboard' },
         { id: 'my-assets', label: 'My Assets', icon: 'inventory_2', path: '/assets' },
-        { id: 'asset-requests', label: 'Asset Requests', icon: 'request_quote', path: '/facilitator/requests' },
+        { id: 'asset-requests', label: 'Asset Requests', icon: 'request_quote', path: '/asset-requests' },
     ];
 
     const navItems = isAdmin ? adminNavItems : isFacilitator ? facilitatorNavItems : [];

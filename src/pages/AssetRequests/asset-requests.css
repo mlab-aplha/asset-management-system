@@ -1,0 +1,142 @@
+.asset-requests-container {
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.asset-requests-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.asset-requests-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.logout-btn {
+  padding: 8px 16px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.logout-btn:hover {
+  background: #c82333;
+}
+
+.asset-requests-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 30px;
+}
+
+.column-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.asset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.asset-item {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 15px;
+  color: #333;
+}
+
+.details-header {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr 100px;
+  gap: 12px;
+  padding: 0 16px 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 12px;
+}
+
+.details-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr 100px;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.detail-request {
+  font-size: 14px;
+  color: #333;
+}
+
+.detail-category {
+  font-size: 14px;
+  color: #333;
+}
+
+.detail-location {
+  font-size: 14px;
+  color: #333;
+}
+
+.detail-status {
+  font-size: 14px;
+  color: #f5a623;
+  text-align: right;
+}
+
+.loading-asset, .loading-details {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.loading-text {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.loading-subtext {
+  font-size: 14px;
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  .asset-requests-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .details-header {
+    display: none;
+  }
+  
+  .details-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .detail-status {
+    text-align: left;
+  }
+}
