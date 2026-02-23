@@ -288,28 +288,28 @@ export const FacilitatorRequestsPage: React.FC = () => {
                 {/* Stats Cards */}
                 <div className="stats-grid">
                     <div className="stat-card">
-                        <span className="stat-icon">📋</span>
+                        <span className="stat-icon"></span>
                         <div className="stat-info">
                             <h3>Total Requests</h3>
                             <p>{requests.length}</p>
                         </div>
                     </div>
                     <div className="stat-card pending">
-                        <span className="stat-icon">⏳</span>
+                        <span className="stat-icon"></span>
                         <div className="stat-info">
                             <h3>Pending</h3>
                             <p>{requests.filter(r => r.status === 'pending').length}</p>
                         </div>
                     </div>
                     <div className="stat-card approved">
-                        <span className="stat-icon">✅</span>
+                        <span className="stat-icon"></span>
                         <div className="stat-info">
                             <h3>Approved</h3>
                             <p>{requests.filter(r => r.status === 'approved').length}</p>
                         </div>
                     </div>
                     <div className="stat-card my-pending">
-                        <span className="stat-icon">👤</span>
+                        <span className="stat-icon"></span>
                         <div className="stat-info">
                             <h3>My Pending</h3>
                             <p>{myPendingCount}</p>

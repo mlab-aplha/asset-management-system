@@ -12,37 +12,37 @@ export const RequestStats: React.FC<RequestStatsProps> = ({ stats }) => {
         {
             title: 'Total Requests',
             value: stats.total,
-            icon: '📊',
+            icon: '',
             color: '#3b82f6'
         },
         {
             title: 'Pending',
             value: stats.pending,
-            icon: '⏳',
+            icon: '',
             color: '#f59e0b'
         },
         {
             title: 'Approved',
             value: stats.approved,
-            icon: '✅',
+            icon: '',
             color: '#10b981'
         },
         {
             title: 'Rejected',
             value: stats.rejected,
-            icon: '❌',
+            icon: '',
             color: '#ef4444'
         },
         {
             title: 'Fulfilled',
             value: stats.fulfilled,
-            icon: '🎯',
+            icon: '',
             color: '#8b5cf6'
         },
         {
             title: 'Urgent',
             value: stats.urgent,
-            icon: '⚠️',
+            icon: '',
             color: '#dc2626'
         }
     ];

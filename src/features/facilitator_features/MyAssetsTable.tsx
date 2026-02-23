@@ -1,49 +1,32 @@
+// src/features/facilitator_features/MyAssetsTable.tsx
 import React from 'react';
 import { Button } from '../../components/ui/Button';
+import { useFacilitatorAssets } from '../../hooks/useFacilitatorAssets';
 import './facilitator-styles.css';
-
-interface Asset {
-    id: string;
-    name: string;
-    serialNumber: string;
-    assetNumber: string;
-    brand: string;
-    assignedTo: string;
-    status: 'in-use' | 'available' | 'maintenance';
-    location: string;
-    assignedDate: string;
-}
 
 interface MyAssetsTableProps {
     onReportIssue: (assetId: string) => void;
 }
 
 export const MyAssetsTable: React.FC<MyAssetsTableProps> = ({ onReportIssue }) => {
-    const assets: Asset[] = [
-        {
-            id: '1',
-            name: 'MacBook Pro M2',
-            serialNumber: 'SN-99201-',
-            assetNumber: 'APP',
-            brand: 'Apple',
-            assignedTo: 'Max',
-            status: 'in-use',
-            location: 'San Francisco HQ',
-            assignedDate: 'Oct 12, 2023'
-        },
-        {
-            id: '2',
-            name: 'Dell UltraSharp 32"',
-            serialNumber: 'SN-88122',
-            assetNumber: 'DLL',
-            brand: 'Dell',
-            assignedTo: '',
-            status: 'available',
-            location: 'San Francisco HQ',
-            assignedDate: 'Nov 05, 2023'
-        }
-    ];
+    const { myAssets, loading, error } = useFacilitatorAssets();
 
+    if (loading) {
+        return <div className="loading-state">Loading your assets...</div>;
+    }
+
+    if (error) {
+        return <div className="error-state">Error loading assets: {error}</div>;
+    }
+
+    if (myAssets.length === 0) {
+        return (
+            <div className="empty-state">
+                <span className="material-icons">inventory</span>
+                <p>No assets assigned to you yet</p>
+            </div>
+        );
+    }
 
     return (
         <div className="assets-table">
@@ -61,10 +44,15 @@ export const MyAssetsTable: React.FC<MyAssetsTableProps> = ({ onReportIssue }) =
             </div>
 
             <div className="table-body">
-                {assets.map((asset) => (
+                {myAssets.map((asset) => (
                     <div key={asset.id} className="table-row">
                         <div className="table-cell asset-icon">
-                            <span className="material-icons">laptop_mac</span>
+                            <span className="material-icons">
+                                {asset.name.toLowerCase().includes('laptop') ? 'laptop' :
+                                    asset.name.toLowerCase().includes('camera') ? 'videocam' :
+                                        asset.name.toLowerCase().includes('printer') ? 'print' :
+                                            'devices'}
+                            </span>
                         </div>
                         <div className="table-cell asset-info">
                             <div className="asset-name">{asset.name}</div>
@@ -78,7 +66,9 @@ export const MyAssetsTable: React.FC<MyAssetsTableProps> = ({ onReportIssue }) =
                         </div>
                         <div className="table-cell location">
                             <div className="location-name">{asset.location}</div>
-                            <div className="location-code">HQ</div>
+                            {asset.locationCode && (
+                                <div className="location-code">{asset.locationCode}</div>
+                            )}
                         </div>
                         <div className="table-cell date">{asset.assignedDate}</div>
                         <div className="table-cell assigned-to">{asset.assignedTo}</div>

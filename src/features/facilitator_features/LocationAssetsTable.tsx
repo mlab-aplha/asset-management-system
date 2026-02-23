@@ -1,66 +1,32 @@
+// src/features/facilitator_features/LocationAssetsTable.tsx
 import React from 'react';
 import { Button } from '../../components/ui/Button';
+import { useFacilitatorAssets } from '../../hooks/useFacilitatorAssets';
 import './facilitator-styles.css';
-
-interface LocationAsset {
-    id: string;
-    name: string;
-    serialNumber: string;
-    assetNumber: string;
-    location: string;
-    status: 'in-use' | 'available' | 'maintenance';
-    assignedTo: string;
-    facility: string;
-}
 
 interface LocationAssetsTableProps {
     onReportIssue: (assetId: string) => void;
 }
 
 export const LocationAssetsTable: React.FC<LocationAssetsTableProps> = ({ onReportIssue }) => {
-    const assets: LocationAsset[] = [
-        {
-            id: '1',
-            name: 'Sony Alpha A7 IV',
-            serialNumber: 'SN-77344-',
-            assetNumber: 'SNY',
-            location: 'Camera Room B',
-            status: 'in-use',
-            assignedTo: 'Sarah Jenkins',
-            facility: 'Sarah Jenkins'
-        },
-        {
-            id: '2',
-            name: 'HP LaserJet Enterprise',
-            serialNumber: 'SN-12903-',
-            assetNumber: 'HPP',
-            location: '2nd Floor Common Area',
-            status: 'available',
-            assignedTo: 'Shared Asset',
-            facility: 'Managed'
-        },
-        {
-            id: '3',
-            name: 'Poly Studio X50',
-            serialNumber: 'SN-44510-',
-            assetNumber: 'PLY',
-            location: 'Conference Room "Golden Gate"',
-            status: 'maintenance',
-            assignedTo: 'Shared Asset',
-            facility: 'Managed'
-        }
-    ];
+    const { locationAssets, loading, error } = useFacilitatorAssets();
 
-    const getStatusBadge = (status: LocationAsset['status']) => {
-        switch (status) {
-            case 'in-use':
-                return <span className="status-badge in-use">In Use</span>;
-            case 'available':
-                return <span className="status-badge available">Available</span>;
-            case 'maintenance':
-                return <span className="status-badge maintenance">Maintenance</span>;
-        }
-    };
+    if (loading) {
+        return <div className="loading-state">Loading location assets...</div>;
+    }
+
+    if (error) {
+        return <div className="error-state">Error loading assets: {error}</div>;
+    }
+
+    if (locationAssets.length === 0) {
+        return (
+            <div className="empty-state">
+                <span className="material-icons">location_on</span>
+                <p>No assets found at your locations</p>
+            </div>
+        );
+    }
 
     return (
         <div className="assets-table">
@@ -70,26 +36,26 @@ export const LocationAssetsTable: React.FC<LocationAssetsTableProps> = ({ onRepo
                     <div className="table-cell">ASSET NAME</div>
                     <div className="table-cell">SERIAL</div>
                     <div className="table-cell">NUMBER</div>
-                    <div className="table-cell">ASSIGNED TO</div>
-                    <div className="table-cell">FACILITY</div>
+                    <div className="table-cell">LOCATION</div>
                     <div className="table-cell">STATUS</div>
                     <div className="table-cell">ACTIONS</div>
                 </div>
             </div>
 
             <div className="table-body">
-                {assets.map((asset) => (
+                {locationAssets.map((asset) => (
                     <div key={asset.id} className="table-row">
                         <div className="table-cell asset-icon">
                             <span className="material-icons">
-                                {asset.name.includes('Camera') ? 'photo_camera' :
-                                    asset.name.includes('HP') ? 'print' :
-                                        'video_camera_front'}
+                                {asset.name.toLowerCase().includes('laptop') ? 'laptop' :
+                                    asset.name.toLowerCase().includes('camera') ? 'videocam' :
+                                        asset.name.toLowerCase().includes('printer') ? 'print' :
+                                            'devices_other'}
                             </span>
                         </div>
                         <div className="table-cell asset-info">
                             <div className="asset-name">{asset.name}</div>
-                            <div className="asset-location">{asset.location}</div>
+                            <div className="asset-details">{asset.brand}</div>
                         </div>
                         <div className="table-cell serial-number">
                             {asset.serialNumber}
@@ -97,37 +63,27 @@ export const LocationAssetsTable: React.FC<LocationAssetsTableProps> = ({ onRepo
                         <div className="table-cell asset-number">
                             {asset.assetNumber}
                         </div>
-                        <div className="table-cell assigned-to">
-                            {asset.assignedTo}
+                        <div className="table-cell location">
+                            <div className="location-name">{asset.location}</div>
+                            <div className="location-code">{asset.locationCode}</div>
                         </div>
-                        <div className="table-cell facility">
-                            {asset.facility}
-                        </div>
-                        <div className="table-cell status">
-                            {getStatusBadge(asset.status)}
+                        <div className="table-cell">
+                            <span className={`status-badge ${asset.status}`}>
+                                {asset.status}
+                            </span>
                         </div>
                         <div className="table-cell actions">
                             <Button
                                 variant="outline"
                                 size="sm"
-                                icon="report"
+                                icon="visibility"
                                 onClick={() => onReportIssue(asset.id)}
                             >
-                                Report Issue
+                                View
                             </Button>
                         </div>
                     </div>
                 ))}
-            </div>
-
-            <div className="table-footer">
-                <div className="pagination-info">
-                    Showing 3 of 84 assets at this location
-                </div>
-                <div className="pagination-controls">
-                    <Button variant="secondary" size="sm">Previous</Button>
-                    <Button variant="secondary" size="sm">Next</Button>
-                </div>
             </div>
         </div>
     );

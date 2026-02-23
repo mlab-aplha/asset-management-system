@@ -1,44 +1,32 @@
+// src/features/facilitator_features/AssetStatsGrid.tsx
 import React from 'react';
+import { Card } from '../../components/ui/Card';
+import { useFacilitatorAssets } from '../../hooks/useFacilitatorAssets';
 import './facilitator-styles.css';
 
 export const AssetStatsGrid: React.FC = () => {
+    const { stats } = useFacilitatorAssets();
+
+    const statCards = [
+        { label: 'Total Assigned', value: stats.assignedToMe, icon: 'assignment_ind', color: '#3b82f6' },
+        { label: 'In Use', value: stats.assignedToMe, icon: 'check_circle', color: '#10b981' },
+        { label: 'Available', value: stats.availableAssets, icon: 'inventory', color: '#f59e0b' },
+        { label: 'Maintenance', value: stats.maintenanceAssets, icon: 'build', color: '#ef4444' }
+    ];
+
     return (
-        <div className="asset-stats-grid">
-            <div className="stat-card">
-                <div className="stat-card-content">
-                    <h3 className="stat-card-title">MY TOTAL ASSETS</h3>
-                    <div className="stat-card-value">12</div>
-                    <div className="stat-card-trend">
-                        <span className="trend-up">+1</span>
-                        from last month
+        <div className="stats-grid">
+            {statCards.map((stat, index) => (
+                <Card key={index} glass className="stat-card">
+                    <div className="stat-icon" style={{ color: stat.color }}>
+                        <span className="material-icons">{stat.icon}</span>
                     </div>
-                </div>
-                <div className="stat-card-icon">
-                    <span className="material-icons">inventory_2</span>
-                </div>
-            </div>
-
-            <div className="stat-card">
-                <div className="stat-card-content">
-                    <h3 className="stat-card-title">ASSIGNED LOCATIONS</h3>
-                    <div className="stat-card-value">1</div>
-                    <div className="stat-card-subtitle">Kimberly</div>
-                </div>
-                <div className="stat-card-icon">
-                    <span className="material-icons">location_on</span>
-                </div>
-            </div>
-
-            <div className="stat-card">
-                <div className="stat-card-content">
-                    <h3 className="stat-card-title">OPEN SITE ISSUES</h3>
-                    <div className="stat-card-value">4</div>
-                    <div className="stat-card-warning">Requires Action</div>
-                </div>
-                <div className="stat-card-icon">
-                    <span className="material-icons">warning</span>
-                </div>
-            </div>
+                    <div className="stat-content">
+                        <div className="stat-value">{stat.value}</div>
+                        <div className="stat-label">{stat.label}</div>
+                    </div>
+                </Card>
+            ))}
         </div>
     );
 };

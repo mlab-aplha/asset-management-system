@@ -35,8 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     const facilitatorNavItems = [
         { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/FacilitatorDashboard' },
-        { id: 'my-assets', label: 'My Assets', icon: 'inventory_2', path: '/assets' },
-        { id: 'asset-requests', label: 'Asset Requests', icon: 'request_quote', path: '/facilitator/requests' },
+        { id: 'my-assets', label: 'My Assets', icon: 'inventory_2', path: '/facilitator/assets' }, { id: 'asset-requests', label: 'Asset Requests', icon: 'request_quote', path: '/facilitator/requests' },
     ];
 
     const navItems = isAdmin ? adminNavItems : isFacilitator ? facilitatorNavItems : [];

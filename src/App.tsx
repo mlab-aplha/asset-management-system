@@ -9,10 +9,11 @@ import { AssetDetailPage } from './pages/AssetDetail/AssetDetailPage';
 import { UserManagementPage } from './pages/UserManagement/UserManagementPage';
 import { LocationManagementPage } from './pages/LocationManagement/LocationManagementPage';
 import { FacilitatorDashboardPage } from './pages/FacilitatorDashboard/FacilitatorDashboardPage';
-import { AdminRequestsPage } from './pages/AdminRequestsPage/AdminRequestsPage'; // ADD THIS
-import { FacilitatorRequestsPage } from './pages/FacilitatorRequestsPage/FacilitatorRequestsPage'; // ADD THIS
-import { AssetRequestsPage } from './pages/AssetRequests/AssetRequestsPage'; // ADD THIS
+import { AdminRequestsPage } from './pages/AdminRequestsPage/AdminRequestsPage';
+import { FacilitatorRequestsPage } from './pages/FacilitatorRequestsPage/FacilitatorRequestsPage';
+import { AssetRequestsPage } from './pages/AssetRequests/AssetRequestsPage';
 import { ProtectedRoute } from '../src/components/auth/ProtectedRoute';
+import { FacilitatorAssetRegistryPage } from './pages/FacilitatorAssetRegistry/FacilitatorAssetRegistryPage';
 import './App.css';
 
 function App() {
@@ -34,7 +35,7 @@ function App() {
           }
         />
         <Route
-          path="/admin/requests"  // NEW ROUTE
+          path="/admin/requests"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminRequestsPage />
@@ -68,10 +69,18 @@ function App() {
           }
         />
         <Route
-          path="/facilitator/requests"  // NEW ROUTE
+          path="/facilitator/requests"
           element={
             <ProtectedRoute allowedRoles={['facilitator']}>
               <FacilitatorRequestsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/facilitator/assets"
+          element={
+            <ProtectedRoute allowedRoles={['facilitator']}>
+              <FacilitatorAssetRegistryPage />
             </ProtectedRoute>
           }
         />
@@ -94,7 +103,7 @@ function App() {
           }
         />
         <Route
-          path="/asset-requests"  // NEW ROUTE
+          path="/asset-requests"
           element={
             <ProtectedRoute allowedRoles={['admin', 'facilitator']}>
               <AssetRequestsPage />
