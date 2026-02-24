@@ -1,3 +1,4 @@
+// src/pages/FacilitatorDashboard/FacilitatorDashboardPage.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from '../../../backend-firebase/src/services/AuthService';
@@ -6,9 +7,11 @@ import { FacilitatorHeader } from '../../features/facilitator_features/Facilitat
 import { AssetStatsGrid } from '../../features/facilitator_features/AssetStatsGrid';
 import { MyAssetsTable } from '../../features/facilitator_features/MyAssetsTable';
 import { LocationAssetsTable } from '../../features/facilitator_features/LocationAssetsTable';
+import { useAuth } from '../../hooks/useAuth'; // Import useAuth
 
 export const FacilitatorDashboardPage: React.FC = () => {
     const navigate = useNavigate();
+    const { user } = useAuth(); // Get user from auth
 
     const handleLogout = async () => {
         try {
@@ -28,6 +31,8 @@ export const FacilitatorDashboardPage: React.FC = () => {
             <FacilitatorHeader
                 title="Facilitator Asset & Location Lists"
                 subtitle="Monitor your assigned inventory and manage assets at your primary site."
+                userName={user?.displayName} // Pass user name
+                userEmail={user?.email}      // Pass user email
                 onLogout={handleLogout}
             />
 
@@ -40,6 +45,8 @@ export const FacilitatorDashboardPage: React.FC = () => {
                         <div className="search-container">
                             <input
                                 type="text"
+                                id="search-my-assets"
+                                name="searchMyAssets"
                                 placeholder="Search my assets..."
                                 className="search-input"
                             />
@@ -48,13 +55,14 @@ export const FacilitatorDashboardPage: React.FC = () => {
                     <MyAssetsTable onReportIssue={handleReportIssue} />
                 </div>
 
-
                 <div className="facilitator-section">
                     <div className="section-header">
                         <h3>Location/Office Assets</h3>
                         <div className="search-container">
                             <input
                                 type="text"
+                                id="search-office-assets"
+                                name="searchOfficeAssets"
                                 placeholder="Search office equipment..."
                                 className="search-input"
                             />

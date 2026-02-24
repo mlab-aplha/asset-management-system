@@ -1,6 +1,6 @@
 export * from '../entities/Asset';
 export * from '../entities/User';
-export * from '../entities/Assignment';
+export { AssetCondition as AssignmentAssetCondition } from './Assignment';
 
 // Common types
 export interface ApiResponse<T> {

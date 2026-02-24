@@ -3,7 +3,6 @@ import React from 'react';
 import { Button } from '../../components/ui/Button';
 import { useFacilitatorAssets } from '../../hooks/useFacilitatorAssets';
 import './facilitator-styles.css';
-
 interface MyAssetsTableProps {
     onReportIssue: (assetId: string) => void;
 }
