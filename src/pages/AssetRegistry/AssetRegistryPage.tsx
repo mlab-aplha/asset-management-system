@@ -9,35 +9,38 @@ import { AssetFormData } from '../../core/types/AssetFormTypes';
 import { useAssets } from '../../hooks/useAssets';
 import { useLocations } from '../../hooks/useLocations';
 import './registry.css';
+
 const LoadingState: React.FC = () => (
-    <Card glass className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading assets...</p>
+    <Card className="state-container">
+        <div className="loading-indicator">
+            <div className="spinner"></div>
+        </div>
+        <p className="state-message">Loading assets...</p>
     </Card>
 );
 
 const ErrorState: React.FC<{ error: string | null; onRetry: () => void }> = ({ error, onRetry }) => (
-    <Card glass className="error-container">
-        <span className="material-icons">error</span>
-        <p>Error loading assets: {error}</p>
+    <Card className="state-container error">
+        <div className="state-indicator">!</div>
+        <p className="state-message">Error loading assets: {error}</p>
         <Button
             variant="primary"
             onClick={onRetry}
-            style={{ marginTop: '1rem' }}
+            className="retry-button"
         >
-            Retry
+            Try Again
         </Button>
     </Card>
 );
 
 const EmptyState: React.FC<{ onAddAsset: () => void }> = ({ onAddAsset }) => (
-    <Card glass className="empty-container">
-        <span className="material-icons">inventory</span>
-        <p>No assets found</p>
+    <Card className="state-container">
+        <div className="state-indicator">📋</div>
+        <p className="state-message">No assets found</p>
         <Button
             variant="primary"
             onClick={onAddAsset}
-            style={{ marginTop: '1rem' }}
+            className="add-first-button"
         >
             Add Your First Asset
         </Button>
@@ -56,7 +59,7 @@ export const AssetRegistryPage: React.FC = () => {
         deleteAsset
     } = useAssets();
 
-    const { locations } = useLocations();
+    const { locations, loading: locationsLoading, loadLocations } = useLocations();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -66,7 +69,9 @@ export const AssetRegistryPage: React.FC = () => {
     const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
     const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
 
-    // Format date helper
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
+
     const formatDate = useCallback((date?: Date): string => {
         if (!date) return 'N/A';
         return date.toLocaleDateString('en-GB', {
@@ -76,12 +81,11 @@ export const AssetRegistryPage: React.FC = () => {
         });
     }, []);
 
-    // Load assets on component mount
     useEffect(() => {
         fetchAssets();
-    }, [fetchAssets]);
+        loadLocations();
+    }, [fetchAssets, loadLocations]);
 
-    // Create location map from locations data
     const locationMap = React.useMemo(() => {
         const map: Record<string, string> = {};
         locations.forEach(location => {
@@ -90,12 +94,17 @@ export const AssetRegistryPage: React.FC = () => {
         return map;
     }, [locations]);
 
-    // Get unique categories for filters
+    const locationOptions = React.useMemo(() => {
+        return locations.map(location => ({
+            id: location.id,
+            name: location.name
+        }));
+    }, [locations]);
+
     const categories = React.useMemo(() => {
         return Array.from(new Set(assets.map(asset => asset.category).filter(Boolean))) as string[];
     }, [assets]);
 
-    // CRUD Operations with real Firebase
     const handleDeleteAsset = async (assetId: string) => {
         if (window.confirm('Are you sure you want to delete this asset?')) {
             const result = await deleteAsset(assetId);
@@ -123,11 +132,9 @@ export const AssetRegistryPage: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    // Handle form submission - FIXED TYPE CONVERSION
     const handleSubmitAsset = async (formData: AssetFormData) => {
         try {
             if (formMode === 'edit' && editingAsset) {
-                // Update existing asset - Convert AssetFormData to UpdateAssetDto
                 const updateData = {
                     name: formData.name,
                     assetId: formData.assetId,
@@ -157,7 +164,6 @@ export const AssetRegistryPage: React.FC = () => {
                     throw new Error(result.error || 'Failed to update asset');
                 }
             } else {
-                // Create new asset - Convert AssetFormData to CreateAssetDto
                 const createData = {
                     name: formData.name,
                     assetId: formData.assetId,
@@ -194,30 +200,14 @@ export const AssetRegistryPage: React.FC = () => {
         }
     };
 
-    const handleExport = () => {
-        const csvContent = "data:text/csv;charset=utf-8,"
-            + "Asset ID,Name,Category,Status,Location,Condition,Created\n"
-            + filteredAssets.map(asset =>
-                `${asset.assetId},${asset.name},${asset.category},${asset.status},${locationMap[asset.currentLocationId] || 'N/A'},${asset.condition},${formatDate(asset.createdAt)}`
-            ).join("\n");
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `assets_export_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
     const handleClearFilters = () => {
         setSearchTerm('');
         setStatusFilter('all');
         setCategoryFilter('all');
         setLocationFilter('all');
+        setCurrentPage(1);
     };
 
-    // Filter assets
     const filteredAssets = assets.filter(asset => {
         const matchesSearch = searchTerm === '' ||
             asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -232,261 +222,346 @@ export const AssetRegistryPage: React.FC = () => {
         return matchesSearch && matchesStatus && matchesCategory && matchesLocation;
     });
 
+    const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentAssets = filteredAssets.slice(startIndex, endIndex);
+
     const availableAssets = assets.filter(a => a.status === 'available').length;
 
-    // Determine content to render
+    const activeFilterCount = [
+        statusFilter !== 'all',
+        categoryFilter !== 'all',
+        locationFilter !== 'all',
+        searchTerm !== ''
+    ].filter(Boolean).length;
+
+    const goToPage = (page: number) => {
+        setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+    };
+
+    const renderPagination = () => {
+        if (totalPages <= 1) return null;
+
+        return (
+            <div className="pagination" role="navigation" aria-label="Pagination">
+                <button
+                    className="pagination-button"
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    aria-label="Go to previous page"
+                >
+                    ← Previous
+                </button>
+                <div className="pagination-info" aria-current="page">
+                    Page {currentPage} of {totalPages}
+                </div>
+                <button
+                    className="pagination-button"
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    aria-label="Go to next page"
+                >
+                    Next →
+                </button>
+            </div>
+        );
+    };
+
     const renderContent = () => {
-        if (loading) return <LoadingState />;
-        if (error) return <ErrorState error={error} onRetry={() => fetchAssets()} />;
+        if (loading || locationsLoading) return <LoadingState />;
+        if (error) return <ErrorState error={error} onRetry={() => {
+            fetchAssets();
+            loadLocations();
+        }} />;
         if (filteredAssets.length === 0) return <EmptyState onAddAsset={handleAddAsset} />;
 
         return (
-            <Card glass className="table-container">
-                <table className="asset-table">
-                    <thead>
-                        <tr>
-                            <th>Asset ID</th>
-                            <th>Asset Name</th>
-                            <th>Category</th>
-                            <th>Location</th>
-                            <th>Status</th>
-                            <th>Condition</th>
-                            <th>Created</th>
-                            <th className="text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredAssets.map((asset) => {
-                            const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
-                                'available': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: '#10b981' },
-                                'assigned': { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: '#3b82f6' },
-                                'maintenance': { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: '#f59e0b' },
-                                'retired': { bg: 'bg-red-500/10', text: 'text-red-400', dot: '#ef4444' }
-                            };
-                            const statusColor = statusColors[asset.status] || statusColors.available;
+            <>
+                <div className="table-wrapper">
+                    <table className="asset-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Asset ID</th>
+                                <th scope="col">Asset Name</th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Location</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Condition</th>
+                                <th scope="col">Created</th>
+                                <th scope="col" className="actions-header">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {currentAssets.map((asset) => {
+                                const statusClasses = {
+                                    'available': 'status-available',
+                                    'assigned': 'status-assigned',
+                                    'maintenance': 'status-maintenance',
+                                    'retired': 'status-retired'
+                                };
 
-                            return (
-                                <tr key={asset.id} className="asset-row">
-                                    <td className="asset-id">
-                                        {asset.assetId || asset.id.substring(0, 8)}
-                                    </td>
-                                    <td className="asset-info">
-                                        <div className="asset-name">{asset.name}</div>
-                                        {asset.description && (
-                                            <div className="asset-specs">{asset.description}</div>
-                                        )}
-                                        {asset.serialNumber && (
-                                            <div className="asset-serial">S/N: {asset.serialNumber}</div>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <span className="category-badge">
-                                            {asset.category || 'Uncategorized'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div className="location-cell">
-                                            <span className="location-dot"></span>
-                                            <span className="location-text">
-                                                {locationMap[asset.currentLocationId] || 'Not specified'}
+                                return (
+                                    <tr key={asset.id} className="asset-row">
+                                        <td className="asset-id">
+                                            {asset.assetId || asset.id.substring(0, 8)}
+                                        </td>
+                                        <td className="asset-info">
+                                            <div className="asset-name">{asset.name}</div>
+                                            {asset.description && (
+                                                <div className="asset-description">{asset.description}</div>
+                                            )}
+                                            {asset.serialNumber && (
+                                                <div className="asset-serial">S/N: {asset.serialNumber}</div>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <span className="category-tag">
+                                                {asset.category || 'Uncategorized'}
                                             </span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className={`status-badge ${statusColor.bg} ${statusColor.text}`}>
-                                            <span className="status-dot" style={{ backgroundColor: statusColor.dot }}></span>
-                                            <span className="status-text">
+                                        </td>
+                                        <td>
+                                            <div className="location-info">
+                                                <span className="location-dot" aria-hidden="true"></span>
+                                                <span className="location-name">
+                                                    {locationMap[asset.currentLocationId] || 'Not specified'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className={`status-badge ${statusClasses[asset.status] || ''}`}>
                                                 {asset.status.charAt(0).toUpperCase() + asset.status.slice(1)}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span className={`condition-tag condition-${asset.condition}`}>
+                                                {asset.condition.charAt(0).toUpperCase() + asset.condition.slice(1)}
                                             </span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={`condition-badge ${asset.condition}`}>
-                                            {asset.condition.charAt(0).toUpperCase() + asset.condition.slice(1)}
-                                        </span>
-                                    </td>
-                                    <td className="created-date">
-                                        {formatDate(asset.createdAt)}
-                                    </td>
-                                    <td className="action-cell">
-                                        <div className="action-buttons">
-                                            <button
-                                                className="icon-btn"
-                                                onClick={() => handleViewAsset(asset.id)}
-                                                title="View Details"
-                                                type="button"
-                                            >
-                                                <span className="material-icons">visibility</span>
-                                            </button>
-                                            <button
-                                                className="icon-btn"
-                                                onClick={() => handleEditAsset(asset)}
-                                                title="Edit Asset"
-                                                type="button"
-                                            >
-                                                <span className="material-icons">edit</span>
-                                            </button>
-                                            <button
-                                                className="icon-btn delete"
-                                                onClick={() => handleDeleteAsset(asset.id)}
-                                                title="Delete Asset"
-                                                type="button"
-                                            >
-                                                <span className="material-icons">delete</span>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </Card>
+                                        </td>
+                                        <td className="date-cell">
+                                            {formatDate(asset.createdAt)}
+                                        </td>
+                                        <td className="actions-cell">
+                                            <div className="action-group" role="group" aria-label={`Actions for ${asset.name}`}>
+                                                <button
+                                                    className="action-button view"
+                                                    onClick={() => handleViewAsset(asset.id)}
+                                                    aria-label={`View details for ${asset.name}`}
+                                                    type="button"
+                                                >
+                                                    View
+                                                </button>
+                                                <button
+                                                    className="action-button edit"
+                                                    onClick={() => handleEditAsset(asset)}
+                                                    aria-label={`Edit ${asset.name}`}
+                                                    type="button"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    className="action-button delete"
+                                                    onClick={() => handleDeleteAsset(asset.id)}
+                                                    aria-label={`Delete ${asset.name}`}
+                                                    type="button"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="table-footer">
+                    <div className="results-info">
+                        Showing <span className="highlight">{startIndex + 1}-{Math.min(endIndex, filteredAssets.length)}</span> of <span className="highlight">{filteredAssets.length}</span> assets
+                    </div>
+                    {renderPagination()}
+                </div>
+            </>
         );
     };
 
     return (
         <DashboardLayout activePage="assets">
             <div className="registry-page">
-                <header className="registry-header">
-                    <div className="registry-header-left">
-                        <h2 className="registry-title">Asset Registry</h2>
-                        <p className="registry-subtitle">
+                <div className="page-header">
+                    <div className="header-content">
+                        <h1 className="page-title">Asset Registry</h1>
+                        <p className="page-description">
                             Track and manage all organizational assets
                         </p>
                     </div>
-                    <div className="registry-header-right">
-                        <div className="registry-stats">
-                            <Card glass className="stat-box">
-                                <span className="stat-label">Total Assets</span>
-                                <span className="stat-value">{assets.length}</span>
-                            </Card>
-                            <Card glass className="stat-box">
-                                <span className="stat-label">Available</span>
-                                <span className="stat-value primary">{availableAssets}</span>
-                            </Card>
+                    <div className="header-stats">
+                        <div className="stat-item">
+                            <span className="stat-label">Total Assets</span>
+                            <span className="stat-value">{assets.length}</span>
+                        </div>
+                        <div className="stat-divider" aria-hidden="true"></div>
+                        <div className="stat-item">
+                            <span className="stat-label">Available</span>
+                            <span className="stat-value highlight">{availableAssets}</span>
                         </div>
                     </div>
-                </header>
+                </div>
 
-                <section className="registry-action-bar">
-                    <div className="action-bar-left">
-                        <div className="search-container">
-                            <span className="material-icons search-icon">search</span>
+                <div className="controls-section">
+                    <div className="search-section">
+                        <div className="search-field">
+                            <label htmlFor="asset-search" className="visually-hidden">Search assets</label>
                             <input
                                 type="text"
-                                placeholder="Search assets by name, ID, or serial..."
+                                id="asset-search"
+                                name="asset-search"
+                                placeholder="Search by name, ID, or serial number..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="search-input"
+                                autoComplete="off"
+                                aria-label="Search assets"
                             />
                         </div>
 
-                        <div className="filter-chips">
-                            <button
-                                className={`filter-chip ${statusFilter === 'all' ? 'active' : ''}`}
-                                onClick={() => setStatusFilter('all')}
-                                type="button"
-                            >
-                                <span className="material-icons">filter_list</span>
-                                All Status
-                            </button>
-                            <button
-                                className={`filter-chip ${statusFilter === 'available' ? 'active' : ''}`}
-                                onClick={() => setStatusFilter('available')}
-                                type="button"
-                            >
-                                <span className="material-icons">check_circle</span>
-                                Available
-                            </button>
-                            <button
-                                className={`filter-chip ${statusFilter === 'assigned' ? 'active' : ''}`}
-                                onClick={() => setStatusFilter('assigned')}
-                                type="button"
-                            >
-                                <span className="material-icons">person</span>
-                                Assigned
-                            </button>
-                            <button
-                                className={`filter-chip ${statusFilter === 'maintenance' ? 'active' : ''}`}
-                                onClick={() => setStatusFilter('maintenance')}
-                                type="button"
-                            >
-                                <span className="material-icons">build</span>
-                                Maintenance
-                            </button>
+                        <div className="filter-bar">
+                            <div className="filter-group" role="group" aria-label="Status filters">
+                                <button
+                                    className={`filter-button ${statusFilter === 'all' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setStatusFilter('all');
+                                        setCurrentPage(1);
+                                    }}
+                                    type="button"
+                                    aria-pressed={statusFilter === 'all'}
+                                >
+                                    All Status
+                                </button>
+                                <button
+                                    className={`filter-button ${statusFilter === 'available' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setStatusFilter('available');
+                                        setCurrentPage(1);
+                                    }}
+                                    type="button"
+                                    aria-pressed={statusFilter === 'available'}
+                                >
+                                    Available
+                                </button>
+                                <button
+                                    className={`filter-button ${statusFilter === 'assigned' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setStatusFilter('assigned');
+                                        setCurrentPage(1);
+                                    }}
+                                    type="button"
+                                    aria-pressed={statusFilter === 'assigned'}
+                                >
+                                    Assigned
+                                </button>
+                                <button
+                                    className={`filter-button ${statusFilter === 'maintenance' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setStatusFilter('maintenance');
+                                        setCurrentPage(1);
+                                    }}
+                                    type="button"
+                                    aria-pressed={statusFilter === 'maintenance'}
+                                >
+                                    Maintenance
+                                </button>
+                            </div>
 
-                            <select
-                                className="filter-chip"
-                                value={categoryFilter}
-                                onChange={(e) => setCategoryFilter(e.target.value)}
-                            >
-                                <option value="all">All Categories</option>
-                                {categories.map(category => (
-                                    <option key={category} value={category}>{category}</option>
-                                ))}
-                            </select>
+                            <div className="filter-group" role="group" aria-label="Category and location filters">
+                                <div className="filter-select-wrapper">
+                                    <label htmlFor="category-filter" className="visually-hidden">Filter by category</label>
+                                    <select
+                                        id="category-filter"
+                                        name="category-filter"
+                                        className="filter-select"
+                                        value={categoryFilter}
+                                        onChange={(e) => {
+                                            setCategoryFilter(e.target.value);
+                                            setCurrentPage(1);
+                                        }}
+                                        aria-label="Filter by category"
+                                    >
+                                        <option value="all">All Categories</option>
+                                        {categories.map(category => (
+                                            <option key={category} value={category}>{category}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                            <select
-                                className="filter-chip"
-                                value={locationFilter}
-                                onChange={(e) => setLocationFilter(e.target.value)}
-                            >
-                                <option value="all">All Locations</option>
-                                {locations.map(location => (
-                                    <option key={location.id} value={location.id}>
-                                        {location.name}
-                                    </option>
-                                ))}
-                            </select>
+                                <div className="filter-select-wrapper">
+                                    <label htmlFor="location-filter" className="visually-hidden">Filter by location</label>
+                                    <select
+                                        id="location-filter"
+                                        name="location-filter"
+                                        className="filter-select"
+                                        value={locationFilter}
+                                        onChange={(e) => {
+                                            setLocationFilter(e.target.value);
+                                            setCurrentPage(1);
+                                        }}
+                                        aria-label="Filter by location"
+                                    >
+                                        <option value="all">All Locations</option>
+                                        {locationOptions.map(location => (
+                                            <option key={location.id} value={location.id}>
+                                                {location.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
 
-                            <button
-                                className="filter-chip clear"
-                                onClick={handleClearFilters}
-                                type="button"
-                            >
-                                <span className="material-icons">filter_alt_off</span>
-                                Clear Filters
-                            </button>
+                            {activeFilterCount > 0 && (
+                                <button
+                                    className="clear-filters"
+                                    onClick={handleClearFilters}
+                                    type="button"
+                                    aria-label={`Clear ${activeFilterCount} active filters`}
+                                >
+                                    Clear Filters ({activeFilterCount})
+                                </button>
+                            )}
                         </div>
                     </div>
 
-                    <div className="action-bar-right">
+                    <div className="action-section">
                         <Button
-                            icon="file_download"
-                            variant="secondary"
-                            onClick={handleExport}
-                        >
-                            Export
-                        </Button>
-                        <Button
-                            icon="add"
                             variant="primary"
                             onClick={handleAddAsset}
+                            className="add-button"
+                            aria-label="Add new asset"
                         >
-                            Add Asset
+                            + Add Asset
                         </Button>
                     </div>
-                </section>
+                </div>
 
-                <section className="registry-data-grid">
+                <div className="content-section">
                     {renderContent()}
-                </section>
+                </div>
 
-                <Card glass className="system-status-card">
-                    <div className="status-header">
-                        <span className="status-title">Asset Registry System</span>
-                        <span className="status-indicator active"></span>
+                <div className="status-footer">
+                    <div className="footer-left">
+                        <span className="system-status">System Status</span>
+                        <span className="status-dot active" aria-label="System online"></span>
                     </div>
-                    <p className="status-message">
+                    <div className="footer-right">
                         {loading ? 'Loading assets...' :
                             error ? `Error: ${error}` :
-                                `Showing ${filteredAssets.length} of ${assets.length} assets`}
-                    </p>
-                </Card>
+                                `${filteredAssets.length} total assets`}
+                    </div>
+                </div>
 
-                /
-                // Update the AssetFormModal component call:
                 <AssetFormModal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
@@ -514,7 +589,6 @@ export const AssetRegistryPage: React.FC = () => {
                         tags: editingAsset.tags
                     } : undefined}
                 />
-
             </div>
         </DashboardLayout>
     );

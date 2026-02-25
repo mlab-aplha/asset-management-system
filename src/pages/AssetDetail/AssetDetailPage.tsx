@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { AssetFormModal } from '../../assets/AssetFormModal'; // Import the modal
+import { AssetFormModal } from '../../assets/AssetFormModal';
 import { useAssets } from '../../hooks/useAssets';
 import { Asset } from '../../core/entities/Asset';
 import { AssetFormData } from '../../core/types/AssetFormTypes';

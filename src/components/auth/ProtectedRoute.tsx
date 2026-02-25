@@ -15,10 +15,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const location = useLocation();
 
     if (loading) {
-        return <div>Loading...</div>;
+        return (
+            <div className="loading-container">
+                <div className="spinner"></div>
+                <p>Loading...</p>
+            </div>
+        );
     }
 
     if (!isAuthenticated) {
+        // Clear any cached/stale data that might cause issues
+        sessionStorage.clear();
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
@@ -26,7 +33,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         if (user.role === 'admin') {
             return <Navigate to="/dashboard" replace />;
         } else if (user.role === 'facilitator') {
-            return <Navigate to="/facilitator/dashboard" replace />; // FIXED: lowercase f, with slash
+            return <Navigate to="/facilitator/dashboard" replace />;
         }
     }
 
