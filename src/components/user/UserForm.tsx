@@ -1,203 +1,268 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/Button';
-import { UserFormData } from '../../core/entities/User';
-import { UserValidation } from '../../utils/Validation_userManagement';
+import { Card } from '../ui/Card';
+import './user-form.css';
 
 interface UserFormProps {
-    initialData?: Partial<UserFormData>;
-    onSubmit: (data: UserFormData) => Promise<{ success: boolean; errors?: Record<string, string> }>;
+    initialData?: {
+        displayName: string;
+        email: string;
+        role: string;
+        department: string;
+        status: string;
+    };
+    onSubmit: (data: any) => void;
     onCancel: () => void;
-    isSubmitting: boolean;
-    title: string;
-    errors?: Record<string, string>; // Add this line
+    isSubmitting?: boolean;
+    title?: string;
+    errors?: Record<string, string>;
 }
 
 export const UserForm: React.FC<UserFormProps> = ({
     initialData,
     onSubmit,
     onCancel,
-    isSubmitting,
-    title,
-    errors: externalErrors // Receive external errors
+    isSubmitting = false,
+    title = 'User Information',
+    errors = {}
 }) => {
-    const [formData, setFormData] = useState<UserFormData>({
-        displayName: '',
-        email: '',
-        role: 'facilitator',
-        department: '',
-        status: 'active',
-        ...initialData
+    const [formData, setFormData] = useState({
+        displayName: initialData?.displayName || '',
+        email: initialData?.email || '',
+        role: initialData?.role || 'user',
+        department: initialData?.department || '',
+        status: initialData?.status || 'active'
     });
 
-    const [errors, setErrors] = useState<Record<string, string>>({});
+    // Password generator states - only for new users
+    const [generatedPassword, setGeneratedPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
-    // Merge external errors with internal errors
-    const allErrors = { ...errors, ...externalErrors };
-
-    // Get validation data
-    const roles = UserValidation.getValidRoles();
-    const statuses = UserValidation.getValidStatuses();
-    const departments = UserValidation.getCommonDepartments();
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-
-        // Clear error for this field when user starts typing
-        if (allErrors[name]) {
-            setErrors(prev => ({
-                ...prev,
-                [name]: ''
-            }));
+    // Generate password for new users
+    const generatePassword = () => {
+        const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+        const numbers = '0123456789';
+        const special = '!@#$%^&*';
+        
+        let password = '';
+        
+        password += uppercase[Math.floor(Math.random() * uppercase.length)];
+        password += lowercase[Math.floor(Math.random() * lowercase.length)];
+        password += numbers[Math.floor(Math.random() * numbers.length)];
+        password += special[Math.floor(Math.random() * special.length)];
+        
+        const allChars = uppercase + lowercase + numbers + special;
+        for (let i = password.length; i < 12; i++) {
+            password += allChars[Math.floor(Math.random() * allChars.length)];
         }
+        
+        password = password.split('').sort(() => 0.5 - Math.random()).join('');
+        setGeneratedPassword(password);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const result = await onSubmit(formData);
-
-        if (!result.success && result.errors) {
-            setErrors(result.errors);
+    // Generate password on mount for new users
+    useEffect(() => {
+        if (!initialData) {
+            generatePassword();
         }
+    }, [initialData]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        // Include password only for new users
+        const submitData = !initialData 
+            ? { ...formData, password: generatedPassword }
+            : formData;
+        
+        onSubmit(submitData);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="modal-form">
-            <div className="form-group">
-                <label className="form-label">
-                    Display Name <span className="required-star">*</span>
-                </label>
-                <input
-                    type="text"
-                    name="displayName"
-                    value={formData.displayName}
-                    onChange={handleInputChange}
-                    className={`form-input ${allErrors.displayName ? 'error' : ''}`}
-                    placeholder="Enter full name"
-                    disabled={isSubmitting}
-                />
-                {allErrors.displayName && (
-                    <span className="error-text">{allErrors.displayName}</span>
+        <Card className="user-form-card">
+            <form onSubmit={handleSubmit} className="user-form">
+                <h2 className="form-title">{title}</h2>
+                
+                {errors.general && (
+                    <div className="error-message">{errors.general}</div>
                 )}
-            </div>
 
-            <div className="form-group">
-                <label className="form-label">
-                    Email Address <span className="required-star">*</span>
-                </label>
-                <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className={`form-input ${allErrors.email ? 'error' : ''}`}
-                    placeholder="user@example.com"
-                    disabled={isSubmitting}
-                />
-                {allErrors.email && (
-                    <span className="error-text">{allErrors.email}</span>
-                )}
-            </div>
+                <div className="form-grid">
+                    {/* Display Name */}
+                    <div className="form-group">
+                        <label htmlFor="displayName">
+                            Full Name <span className="required">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="displayName"
+                            name="displayName"
+                            value={formData.displayName}
+                            onChange={handleChange}
+                            required
+                            className={errors.displayName ? 'error' : ''}
+                        />
+                        {errors.displayName && (
+                            <span className="field-error">{errors.displayName}</span>
+                        )}
+                    </div>
 
-            <div className="form-group">
-                <label className="form-label">
-                    Role <span className="required-star">*</span>
-                </label>
-                <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    className={`form-select ${allErrors.role ? 'error' : ''}`}
-                    disabled={isSubmitting}
-                >
-                    {roles.map((role) => (
-                        <option key={role.value} value={role.value}>
-                            {role.label}
-                        </option>
-                    ))}
-                </select>
-                {allErrors.role && (
-                    <span className="error-text">{allErrors.role}</span>
-                )}
-            </div>
+                    {/* Email */}
+                    <div className="form-group">
+                        <label htmlFor="email">
+                            Email Address <span className="required">*</span>
+                        </label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            className={errors.email ? 'error' : ''}
+                            placeholder="user@mlab.co.za"
+                        />
+                        {errors.email && (
+                            <span className="field-error">{errors.email}</span>
+                        )}
+                        <small className="field-hint">Must be @mlab.co.za or @mlab.org.za</small>
+                    </div>
 
-            <div className="form-group">
-                <label className="form-label">
-                    Department <span className="required-star">*</span>
-                </label>
-                <select
-                    name="department"
-                    value={formData.department}
-                    onChange={handleInputChange}
-                    className={`form-select ${allErrors.department ? 'error' : ''}`}
-                    disabled={isSubmitting}
-                >
-                    <option value="">Select department</option>
-                    {departments.map((dept) => (
-                        <option key={dept} value={dept}>
-                            {dept}
-                        </option>
-                    ))}
-                    <option value="Other">Other</option>
-                </select>
-                {formData.department === 'Other' && (
-                    <input
-                        type="text"
-                        name="departmentOther"
-                        value={formData.department}
-                        onChange={handleInputChange}
-                        className={`form-input mt-2 ${allErrors.department ? 'error' : ''}`}
-                        placeholder="Enter custom department"
+                    {/* Role */}
+                    <div className="form-group">
+                        <label htmlFor="role">
+                            Role <span className="required">*</span>
+                        </label>
+                        <select
+                            id="role"
+                            name="role"
+                            value={formData.role}
+                            onChange={handleChange}
+                            required
+                            className={errors.role ? 'error' : ''}
+                        >
+                            <option value="user">User</option>
+                            <option value="facilitator">Facilitator</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        {errors.role && (
+                            <span className="field-error">{errors.role}</span>
+                        )}
+                    </div>
+
+                    {/* Department */}
+                    <div className="form-group">
+                        <label htmlFor="department">
+                            Department
+                        </label>
+                        <select
+                            id="department"
+                            name="department"
+                            value={formData.department}
+                            onChange={handleChange}
+                        >
+                            <option value="">Select department</option>
+                            <option value="Training">Training</option>
+                            <option value="IT">IT</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Management">Management</option>
+                        </select>
+                    </div>
+
+                    {/* Status */}
+                    <div className="form-group">
+                        <label htmlFor="status">
+                            Status
+                        </label>
+                        <select
+                            id="status"
+                            name="status"
+                            value={formData.status}
+                            onChange={handleChange}
+                        >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+
+                    {/* PASSWORD GENERATOR - Only for new users */}
+                    {!initialData && (
+                        <div className="form-group full-width password-section">
+                            <label>Generated Password</label>
+                            <div className="password-container">
+                                <div className="password-input-wrapper">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={generatedPassword}
+                                        readOnly
+                                        className="password-input"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="password-toggle"
+                                    >
+                                        {showPassword ? '👁️' : '👁️‍🗨️'}
+                                    </button>
+                                </div>
+                                <div className="password-actions">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={generatePassword}
+                                    >
+                                        Generate New
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(generatedPassword);
+                                            alert('Password copied to clipboard!');
+                                        }}
+                                    >
+                                        Copy
+                                    </Button>
+                                </div>
+                            </div>
+                            <small className="password-hint">
+                                Password auto-generated. Save it to share with the user.
+                            </small>
+                        </div>
+                    )}
+                </div>
+
+                {/* Form Actions */}
+                <div className="form-actions">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onCancel}
                         disabled={isSubmitting}
-                    />
-                )}
-                {allErrors.department && (
-                    <span className="error-text">{allErrors.department}</span>
-                )}
-            </div>
-
-            <div className="form-group">
-                <label className="form-label">
-                    Status <span className="required-star">*</span>
-                </label>
-                <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className={`form-select ${allErrors.status ? 'error' : ''}`}
-                    disabled={isSubmitting}
-                >
-                    {statuses.map((status) => (
-                        <option key={status.value} value={status.value}>
-                            {status.label}
-                        </option>
-                    ))}
-                </select>
-                {allErrors.status && (
-                    <span className="error-text">{allErrors.status}</span>
-                )}
-            </div>
-
-            <div className="form-actions">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onCancel}
-                    disabled={isSubmitting}
-                >
-                    Cancel
-                </Button>
-                <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting ? 'Saving...' : title}
-                </Button>
-            </div>
-        </form>
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        variant="primary"
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? 'Saving...' : (initialData ? 'Update User' : 'Create User')}
+                    </Button>
+                </div>
+            </form>
+        </Card>
     );
 };
+
+export default UserForm;
