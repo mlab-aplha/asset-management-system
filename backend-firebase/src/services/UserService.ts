@@ -126,7 +126,20 @@ export class UserService implements IUserService {
                 throw new Error('Password is required for new users');
             }
 
-            // First create the user in Firebase Auth
+            // Instead of using AuthService.register which logs in,
+            // we need a different approach. Let's create a new method
+            // in AuthService for admin creation
+
+            // For now, we'll create the auth user and then immediately
+            // log back in as admin - but we need admin credentials
+
+            // This is where the issue is - AuthService.register logs in the new user
+
+            // We need to modify AuthService to have a method that creates
+            // users without logging them in, but Firebase doesn't allow this
+            // on the client side. This requires a server solution.
+
+            // For now, let's proceed with what we have and fix it in the hook
             const authResponse = await AuthService.register({
                 email: userData.email,
                 password: userData.password,
@@ -137,7 +150,7 @@ export class UserService implements IUserService {
                 throw new Error(authResponse.message || 'Failed to create authentication user');
             }
 
-            // Then create the user document in Firestore with the Auth UID
+            // Create Firestore document
             const newUserData = {
                 displayName: userData.displayName,
                 email: userData.email,
@@ -145,7 +158,6 @@ export class UserService implements IUserService {
                 department: userData.department || '',
                 status: userData.status || 'active',
                 uid: authResponse.user.uid,
-
                 assignedHubIds: userData.assignedHubIds || [],
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()

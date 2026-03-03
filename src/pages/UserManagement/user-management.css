@@ -1191,3 +1191,37 @@
         min-width: 200px;
     }
 }
+/* Admin Password Modal */
+.admin-confirm-modal {
+    padding: 1rem;
+}
+
+.admin-confirm-modal p {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+
+.admin-password-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(7, 63, 78, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    color: white;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-password-input:focus {
+    outline: none;
+    border-color: #94c73d;
+    box-shadow: 0 0 0 3px rgba(148, 199, 61, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}

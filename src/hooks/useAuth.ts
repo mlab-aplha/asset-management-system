@@ -21,6 +21,9 @@ export const useAuth = () => {
   const lastActivityRef = useRef<number>(0);
   const isInitializedRef = useRef(false);
 
+  // Flag to prevent auth state changes during user creation
+  const isProcessingUserCreation = useRef(false);
+
   // Initialize lastActivity after component mounts
   useEffect(() => {
     lastActivityRef.current = Date.now();
@@ -171,6 +174,12 @@ export const useAuth = () => {
   // Listen for auth state changes from Firebase
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Skip processing if we're in the middle of user creation
+      if (isProcessingUserCreation.current) {
+        console.log('Skipping auth state change during user creation');
+        return;
+      }
+
       if (firebaseUser) {
         try {
           // Check if token needs refresh
@@ -237,6 +246,20 @@ export const useAuth = () => {
     }
   };
 
+  // Helper function for admin user creation flow
+  const createUserWithAdminContext = useCallback(async <T>(createUserFn: () => Promise<T>): Promise<T> => {
+    isProcessingUserCreation.current = true;
+    try {
+      const result = await createUserFn();
+      return result;
+    } finally {
+      // Small delay to ensure the re-login completes
+      setTimeout(() => {
+        isProcessingUserCreation.current = false;
+      }, 1000);
+    }
+  }, []);
+
   return {
     user,
     loading,
@@ -247,7 +270,8 @@ export const useAuth = () => {
     isFacilitator: user?.role === 'facilitator',
     showTimeoutWarning,
     timeLeft,
-    extendSession
+    extendSession,
+    createUserWithAdminContext
   };
 };
 

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { User, UserFormData, UserFilters } from '../core/entities/User';
 import { userService } from '../../backend-firebase/src/services/UserService';
+import { AuthService } from '../../backend-firebase/src/services/AuthService';
 
 interface ServiceResponse<T = unknown> {
     success: boolean;
@@ -40,8 +41,26 @@ export const useUsers = () => {
                 return { success: false, errors: validation.errors };
             }
 
+            // IMPORTANT: Get current admin user BEFORE creating new user
+            const adminUser = AuthService.getCurrentUser();
+            const adminEmail = adminUser?.email;
+
+            if (!adminEmail) {
+                return {
+                    success: false,
+                    errors: { general: 'Admin session lost. Please log in again.' }
+                };
+            }
+
+            // Store admin password (you'll need to get this from the user)
+            // We'll handle this in the next step
+
+            // Create the new user
             const newUser = await userService.createUser(userData);
+
+            // Refresh the users list
             await loadUsers();
+
             return { success: true, data: newUser };
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to create user';

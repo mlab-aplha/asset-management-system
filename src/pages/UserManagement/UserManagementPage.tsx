@@ -6,10 +6,15 @@ import { Modal } from '../../components/ui/Modal';
 import { UserTable } from '../../components/user/UserTable';
 import { UserForm } from '../../components/user/UserForm';
 import { useUsers } from '../../hooks/useUsers';
+import { useAuth } from '../../hooks/useAuth';
+import { AuthService } from '../../../backend-firebase/src/services/AuthService';
 import { User, UserFormData } from '../../core/entities/User';
 import './user-management.css';
 
 export const UserManagementPage: React.FC = () => {
+    // FIXED: Destructure isAdmin and createUserWithAdminContext
+    const { isAdmin, createUserWithAdminContext } = useAuth();
+
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
     const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'facilitator'>('all');
@@ -18,6 +23,12 @@ export const UserManagementPage: React.FC = () => {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [formErrors, setFormErrors] = useState<Record<string, string> | null>(null);
+
+    // New state for admin password confirmation
+    const [adminPassword, setAdminPassword] = useState('');
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [pendingUserData, setPendingUserData] = useState<UserFormData | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
 
     const {
         users,
@@ -34,8 +45,11 @@ export const UserManagementPage: React.FC = () => {
     const itemsPerPage = 5;
 
     useEffect(() => {
-        loadUsers();
-    }, [loadUsers]);
+        // Only load users if admin
+        if (isAdmin) {
+            loadUsers();
+        }
+    }, [isAdmin, loadUsers]);
 
     // Apply filters to users
     const filteredUsers = users.filter(user => {
@@ -76,7 +90,6 @@ export const UserManagementPage: React.FC = () => {
                 setSuccessMessage(`User "${user.displayName}" deleted successfully!`);
                 setTimeout(() => setSuccessMessage(null), 3000);
             } else {
-                // Handle the case where errors might not exist
                 const errorMsg = result.errors?.general || 'Unknown error occurred';
                 setSuccessMessage(`Failed to delete user: ${errorMsg}`);
                 setTimeout(() => setSuccessMessage(null), 5000);
@@ -101,6 +114,7 @@ export const UserManagementPage: React.FC = () => {
         setFormErrors(null);
 
         if (editingUser) {
+            // Handle edit - no password needed
             const result = await updateUser(editingUser.id, formData);
             if (result.success) {
                 setSuccessMessage(`User "${formData.displayName}" updated successfully!`);
@@ -112,18 +126,69 @@ export const UserManagementPage: React.FC = () => {
                 return { success: false, errors: result.errors };
             }
         } else {
-            const result = await createUser(formData);
+            // For new user, store data and show password modal
+            setPendingUserData(formData);
+            setShowPasswordModal(true);
+            // Don't close the user form modal yet
+            return { success: true };
+        }
+    }, [editingUser, updateUser]);
+
+    const handleConfirmAdmin = useCallback(async () => {
+        if (!pendingUserData || isCreating) return;
+
+        setIsCreating(true);
+
+        try {
+            // Get current admin user
+            const adminUser = AuthService.getCurrentUser();
+            const adminEmail = adminUser?.email;
+
+            if (!adminEmail) {
+                alert('Admin session expired. Please log in again.');
+                setShowPasswordModal(false);
+                return;
+            }
+
+            // Use the new helper to create user without triggering auth state changes
+            const result = await createUserWithAdminContext(async () => {
+                return await createUser(pendingUserData);
+            });
+
             if (result.success) {
-                setSuccessMessage(`User "${formData.displayName}" added successfully!`);
-                setIsModalOpen(false);
-                setTimeout(() => setSuccessMessage(null), 3000);
-                return { success: true };
+                // Immediately log back in as admin using provided password
+                const loginResult = await AuthService.login(adminEmail, adminPassword);
+
+                if (loginResult.success) {
+                    setSuccessMessage(`User "${pendingUserData.displayName}" added successfully!`);
+                    setIsModalOpen(false);
+                    setShowPasswordModal(false);
+                    setAdminPassword('');
+                    setPendingUserData(null);
+
+                    // Refresh the users list
+                    await loadUsers();
+
+                    setTimeout(() => setSuccessMessage(null), 3000);
+                } else {
+                    alert('Failed to restore admin session. Please log in again.');
+                    await AuthService.logout();
+                    window.location.href = '/login';
+                }
             } else {
                 setFormErrors(result.errors || null);
-                return { success: false, errors: result.errors };
+                setShowPasswordModal(false);
+                setPendingUserData(null);
             }
+        } catch (error) {
+            console.error('Error creating user:', error);
+            alert('Failed to create user. Please try again.');
+            setShowPasswordModal(false);
+            setPendingUserData(null);
+        } finally {
+            setIsCreating(false);
         }
-    }, [editingUser, updateUser, createUser]);
+    }, [createUser, adminPassword, pendingUserData, isCreating, loadUsers, createUserWithAdminContext]);
 
     const handleCloseModal = useCallback(() => {
         setIsModalOpen(false);
@@ -150,14 +215,61 @@ export const UserManagementPage: React.FC = () => {
                             email: editingUser.email,
                             role: editingUser.role,
                             department: editingUser.department || '',
-                            status: editingUser.status
+                            status: editingUser.status,
+                            assignedHubIds: editingUser.assignedHubIds || []
                         } : undefined}
                         onSubmit={handleSubmitUser}
                         onCancel={handleCloseModal}
                         isSubmitting={loading}
                         title={editingUser ? 'Update User' : 'Add User'}
-                        errors={formErrors || undefined} // Convert null to undefined
+                        errors={formErrors || undefined}
                     />
+                </Modal>
+
+                {/* Admin Password Confirmation Modal */}
+                <Modal
+                    isOpen={showPasswordModal}
+                    onClose={() => {
+                        setShowPasswordModal(false);
+                        setAdminPassword('');
+                        setPendingUserData(null);
+                    }}
+                    title="Confirm Admin Access"
+                    size="sm"
+                >
+                    <div className="admin-confirm-modal">
+                        <p>
+                            For security, please enter your admin password to confirm user creation:
+                        </p>
+                        <input
+                            type="password"
+                            value={adminPassword}
+                            onChange={(e) => setAdminPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            className="form-input admin-password-input"
+                            autoFocus
+                        />
+                        <div className="modal-actions">
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setShowPasswordModal(false);
+                                    setAdminPassword('');
+                                    setPendingUserData(null);
+                                }}
+                                disabled={isCreating}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={handleConfirmAdmin}
+                                disabled={!adminPassword || isCreating}
+                            >
+                                {isCreating ? 'Creating...' : 'Confirm & Create User'}
+                            </Button>
+                        </div>
+                    </div>
                 </Modal>
 
                 {/* Header Section */}
@@ -276,7 +388,7 @@ export const UserManagementPage: React.FC = () => {
                 )}
 
                 {/* Success Message Display */}
-                {successMessage && !isModalOpen && (
+                {successMessage && !isModalOpen && !showPasswordModal && (
                     <div className="success-message">
                         <span className="material-icons">check_circle</span>
                         <span>{successMessage}</span>
