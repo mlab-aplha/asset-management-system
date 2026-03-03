@@ -7,7 +7,7 @@ import { onAuthStateChanged, getIdToken } from 'firebase/auth';
 
 // Session timeout in milliseconds (5 hours = 5 * 60 * 60 * 1000)
 const SESSION_TIMEOUT = 5 * 60 * 60 * 1000;
-const WARNING_BEFORE = 5 * 60 * 1000; // Show warning 5 minutes before timeout
+const WARNING_BEFORE = 5 * 60 * 1000;
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -157,6 +157,17 @@ export const useAuth = () => {
     };
   }, [user, updateLastActivity]);
 
+  // Helper function to find user by Auth UID
+  const findUserByAuthUid = useCallback(async (authUid: string): Promise<User | null> => {
+    try {
+      const users = await userService.getUsers();
+      return users.find(u => u.uid === authUid) || null;
+    } catch (error) {
+      console.error('Error finding user by auth UID:', error);
+      return null;
+    }
+  }, []);
+
   // Listen for auth state changes from Firebase
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -164,7 +175,8 @@ export const useAuth = () => {
         try {
           // Check if token needs refresh
           await getIdToken(firebaseUser, true);
-          const userData = await userService.getUserById(firebaseUser.uid);
+          // Find user by Auth UID instead of document ID
+          const userData = await findUserByAuthUid(firebaseUser.uid);
           setUser(userData);
         } catch (error) {
           console.error('Error fetching user data:', error);
@@ -184,7 +196,8 @@ export const useAuth = () => {
         try {
           // Force token refresh on initial load
           await getIdToken(firebaseUser, true);
-          const userData = await userService.getUserById(firebaseUser.uid);
+          // Find user by Auth UID instead of document ID
+          const userData = await findUserByAuthUid(firebaseUser.uid);
           setUser(userData);
         } catch (error) {
           console.error('Error fetching user data:', error);
@@ -197,7 +210,7 @@ export const useAuth = () => {
     initAuth();
 
     return () => unsubscribe();
-  }, []);
+  }, [findUserByAuthUid]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -205,7 +218,8 @@ export const useAuth = () => {
       if (result.success && result.user) {
         // Force token refresh on login
         await getIdToken(result.user, true);
-        const userData = await userService.getUserById(result.user.uid);
+        // Find user by Auth UID instead of document ID
+        const userData = await findUserByAuthUid(result.user.uid);
         setUser(userData);
         // Reset last activity on login
         lastActivityRef.current = Date.now();

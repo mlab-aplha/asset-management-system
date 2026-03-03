@@ -24,6 +24,12 @@ export interface Location {
         maxAssets: number;
     };
     address: string;
+    region?: string;
+    contactPerson?: {
+        name: string;
+        email: string;
+        phone: string;
+    };
     createdAt: Date;
     updatedAt: Date;
 }
@@ -39,6 +45,12 @@ export interface CreateLocationData {
         maxAssets: number;
     };
     address?: string;
+    region?: string;
+    contactPerson?: {
+        name: string;
+        email: string;
+        phone: string;
+    };
 }
 
 export interface UpdateLocationData {
@@ -52,6 +64,12 @@ export interface UpdateLocationData {
         maxAssets?: number;
     };
     address?: string;
+    region?: string;
+    contactPerson?: {
+        name?: string;
+        email?: string;
+        phone?: string;
+    };
 }
 
 interface ServiceResponse<T = unknown> {
@@ -84,6 +102,12 @@ export class LocationService {
                         maxAssets: 0
                     },
                     address: data.address || '',
+                    region: data.region || '',
+                    contactPerson: data.contactPerson ? {
+                        name: data.contactPerson.name || '',
+                        email: data.contactPerson.email || '',
+                        phone: data.contactPerson.phone || ''
+                    } : undefined,
                     createdAt: data.createdAt?.toDate() || new Date(),
                     updatedAt: data.updatedAt?.toDate() || new Date()
                 } as Location;
@@ -122,6 +146,12 @@ export class LocationService {
                         maxAssets: 0
                     },
                     address: data.address || '',
+                    region: data.region || '',
+                    contactPerson: data.contactPerson ? {
+                        name: data.contactPerson.name || '',
+                        email: data.contactPerson.email || '',
+                        phone: data.contactPerson.phone || ''
+                    } : undefined,
                     createdAt: data.createdAt?.toDate() || new Date(),
                     updatedAt: data.updatedAt?.toDate() || new Date()
                 } as Location;
@@ -156,7 +186,8 @@ export class LocationService {
                 maxAssets: locationData.capacity.maxAssets || 0
             };
 
-            const location = {
+            // Build location object with optional fields
+            const location: Record<string, unknown> = {
                 name: locationData.name,
                 type: locationData.type,
                 status: locationData.status,
@@ -166,6 +197,19 @@ export class LocationService {
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             };
+
+            // Add optional fields if they exist
+            if (locationData.region) {
+                location.region = locationData.region;
+            }
+
+            if (locationData.contactPerson) {
+                location.contactPerson = {
+                    name: locationData.contactPerson.name || '',
+                    email: locationData.contactPerson.email || '',
+                    phone: locationData.contactPerson.phone || ''
+                };
+            }
 
             const locationsRef = collection(db, this.collectionName);
             const docRef = await addDoc(locationsRef, location);
@@ -193,17 +237,29 @@ export class LocationService {
                 updatedAt: serverTimestamp()
             };
 
+            // Basic fields
             if (updates.name !== undefined) updateData.name = updates.name;
             if (updates.type !== undefined) updateData.type = updates.type;
             if (updates.status !== undefined) updateData.status = updates.status;
             if (updates.code !== undefined) updateData.code = updates.code;
             if (updates.address !== undefined) updateData.address = updates.address;
+            if (updates.region !== undefined) updateData.region = updates.region;
 
+            // Capacity updates
             if (updates.capacity !== undefined) {
                 updateData.capacity = {
                     availableCapacity: updates.capacity.availableCapacity,
                     currentAssets: updates.capacity.currentAssets,
                     maxAssets: updates.capacity.maxAssets
+                };
+            }
+
+            // Contact person updates
+            if (updates.contactPerson !== undefined) {
+                updateData.contactPerson = {
+                    name: updates.contactPerson.name || '',
+                    email: updates.contactPerson.email || '',
+                    phone: updates.contactPerson.phone || ''
                 };
             }
 

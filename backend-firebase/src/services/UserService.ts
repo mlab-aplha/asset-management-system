@@ -14,6 +14,7 @@ import {
 import { db } from '../firebase/config';
 import { User, UserFormData, UserFilters, UserStats } from '../../../src/core/entities/User';
 import { UserValidation } from '../../../src/utils/Validation_userManagement';
+import { AuthService } from './AuthService';
 
 export interface IUserService {
     getUsers(filters?: UserFilters): Promise<User[]>;
@@ -117,16 +118,35 @@ export class UserService implements IUserService {
             // Validate user data
             const validation = this.validateUser(userData);
             if (!validation.isValid) {
-                throw new Error('User data validation failed');
+                throw new Error(Object.values(validation.errors).join(', '));
             }
 
+            // Check if password is provided for new user
+            if (!userData.password) {
+                throw new Error('Password is required for new users');
+            }
+
+            // First create the user in Firebase Auth
+            const authResponse = await AuthService.register({
+                email: userData.email,
+                password: userData.password,
+                displayName: userData.displayName
+            });
+
+            if (!authResponse.success || !authResponse.user) {
+                throw new Error(authResponse.message || 'Failed to create authentication user');
+            }
+
+            // Then create the user document in Firestore with the Auth UID
             const newUserData = {
                 displayName: userData.displayName,
                 email: userData.email,
                 role: userData.role,
                 department: userData.department || '',
                 status: userData.status || 'active',
-                assignedHubIds: [],
+                uid: authResponse.user.uid,
+
+                assignedHubIds: userData.assignedHubIds || [],
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             };
@@ -141,7 +161,7 @@ export class UserService implements IUserService {
             };
         } catch (error) {
             console.error('Error creating user:', error);
-            throw new Error('Failed to create user');
+            throw new Error(error instanceof Error ? error.message : 'Failed to create user');
         }
     }
 
@@ -154,8 +174,12 @@ export class UserService implements IUserService {
                 throw new Error('User not found');
             }
 
+            // Remove password from updates if present (can't update password through this method)
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { password, ...safeUpdates } = updates;
+
             const updateData = {
-                ...updates,
+                ...safeUpdates,
                 updatedAt: serverTimestamp()
             };
 
@@ -180,6 +204,16 @@ export class UserService implements IUserService {
 
             if (!snapshot.exists()) {
                 throw new Error('User not found');
+            }
+
+            const userData = snapshot.data();
+
+            // If the user has a Firebase Auth UID, delete them from Auth as well
+            if (userData.uid) {
+                // Note: Deleting users from Firebase Auth requires Admin SDK
+                // You might want to handle this separately or use Firebase Admin
+                console.log(`User ${userData.uid} needs to be deleted from Auth`);
+                // You could call a cloud function here to delete the auth user
             }
 
             await deleteDoc(userRef);
@@ -249,13 +283,97 @@ export class UserService implements IUserService {
     }
 
     validateUser(data: UserFormData): { isValid: boolean; errors: Record<string, string> } {
+        // Get base validation from UserValidation
         const validationResult = UserValidation.validateUserForm(data);
 
+        // Create a properly typed errors object
+        const errors: Record<string, string> = {};
+
+        // Handle validationResult.errors based on its actual structure
+        // It might be an array of ValidationError objects
+        if (Array.isArray(validationResult.errors)) {
+            // If it's an array, convert each error to a string and store with a generic key
+            validationResult.errors.forEach((error, index) => {
+                if (typeof error === 'string') {
+                    errors[`error${index}`] = error;
+                } else if (error && typeof error === 'object') {
+                    // If it's an object with message property
+                    const errorObj = error as { field?: string; message?: string };
+                    if (errorObj.field && errorObj.message) {
+                        errors[errorObj.field] = errorObj.message;
+                    } else if (errorObj.message) {
+                        errors[`error${index}`] = errorObj.message;
+                    }
+                }
+            });
+        } else if (validationResult.errors && typeof validationResult.errors === 'object') {
+            // If it's an object, process each key
+            const errorObj = validationResult.errors as Record<string, unknown>;
+
+            Object.keys(errorObj).forEach(key => {
+                const errorValue = errorObj[key];
+                if (Array.isArray(errorValue)) {
+                    errors[key] = errorValue.join('. ');
+                } else if (typeof errorValue === 'string') {
+                    errors[key] = errorValue;
+                } else if (errorValue && typeof errorValue === 'object') {
+                    // Handle nested error objects
+                    const nestedError = errorValue as { message?: string };
+                    if (nestedError.message) {
+                        errors[key] = nestedError.message;
+                    }
+                }
+            });
+        }
+
+        // Add password validation for new users
+        // Check if this is a new user (no existing displayName in initial data)
+        const isNewUser = !data.displayName; // Use displayName to determine if it's new/edit
+
+        if (isNewUser) {
+            if (!data.password) {
+                errors.password = 'Password is required';
+            } else {
+                const passwordErrors: string[] = [];
+
+                // Password validation
+                const hasUppercase = /[A-Z]/.test(data.password);
+                const hasLowercase = /[a-z]/.test(data.password);
+                const hasNumber = /[0-9]/.test(data.password);
+                const hasSpecial = /[!@#$%^&*]/.test(data.password);
+                const isLongEnough = data.password.length >= 8;
+
+                if (!isLongEnough) {
+                    passwordErrors.push('Password must be at least 8 characters');
+                }
+                if (!hasUppercase) {
+                    passwordErrors.push('Password must contain an uppercase letter');
+                }
+                if (!hasLowercase) {
+                    passwordErrors.push('Password must contain a lowercase letter');
+                }
+                if (!hasNumber) {
+                    passwordErrors.push('Password must contain a number');
+                }
+                if (!hasSpecial) {
+                    passwordErrors.push('Password must contain a special character (!@#$%^&*)');
+                }
+
+                if (passwordErrors.length > 0) {
+                    errors.password = passwordErrors.join('. ');
+                }
+            }
+        }
+
+        // Determine overall validity
+        const isValid = Object.keys(errors).length === 0;
+
         return {
-            isValid: validationResult.isValid,
-            errors: UserValidation.formatFormErrors(validationResult.errors)
+            isValid,
+            errors
         };
     }
 }
-
+//*9#8VgzDV7v4
+//user@example.com
 export const userService = new UserService();

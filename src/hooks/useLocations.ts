@@ -46,16 +46,20 @@ export const useLocations = () => {
                     code: loc.code,
                     capacity: loc.capacity,
                     address: loc.address,
-                    totalAssets: loc.capacity.currentAssets,
+                    totalAssets: loc.capacity?.currentAssets || 0,
                     createdAt: loc.createdAt,
                     updatedAt: loc.updatedAt,
                     // Optional fields
                     city: '',
                     country: 'South Africa',
                     managerId: '',
-                    primaryContact: undefined,
+                    primaryContact: loc.contactPerson ? {
+                        name: loc.contactPerson.name || '',
+                        email: loc.contactPerson.email || '',
+                        phone: loc.contactPerson.phone || ''
+                    } : undefined,
                     description: '',
-                    region: '',
+                    region: loc.region || '',
                     lastAudit: ''
                 }));
                 setLocations(frontendLocations);

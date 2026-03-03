@@ -1,4 +1,3 @@
-// src/hooks/useFacilitatorRequests.ts
 import { useState, useEffect, useMemo } from 'react';
 import { FacilitatorRequestService } from '../../backend-firebase/src/services/FacilitatorRequestService';
 import { IRequest, IRequestFilters } from '../core/types/request.types';
@@ -14,7 +13,7 @@ export const useFacilitatorRequests = (locationIds: string[], filters?: IRequest
 
     useEffect(() => {
         const fetchRequests = async () => {
-            // Parse back the filters from the string for use in the service call
+            // Parse back the filters from the string
             const parsedFilters = filtersString ? JSON.parse(filtersString) : undefined;
             const parsedLocationIds = JSON.parse(locationIdsString);
 
@@ -27,6 +26,10 @@ export const useFacilitatorRequests = (locationIds: string[], filters?: IRequest
             try {
                 setLoading(true);
                 const service = FacilitatorRequestService.getFacilitatorInstance();
+
+                // Pass the location IDs directly - they are Firestore document IDs
+                console.log('Fetching requests for location IDs:', parsedLocationIds);
+
                 const data = await service.getAssignedRequests(parsedLocationIds, parsedFilters);
                 setRequests(data);
                 setError(null);
