@@ -17,6 +17,7 @@ export type AssetFormData = {
     value?: number;
     assignedTo?: string;
     assignmentDate?: Date;
+    expectedReturnDate?: Date;  // Added this
     notes?: string;
     tags?: string[];
 };
@@ -27,7 +28,7 @@ export interface AssetFormProps {
     onClose: () => void;
     onSubmit: (data: AssetFormData) => Promise<void>;
     mode: 'add' | 'edit';
-    existingAssets?: Array<{ assetId?: string; currentLocationId?: string }>; // Add this line
+    existingAssets?: Array<{ assetId?: string; currentLocationId?: string }>;
 }
 
 export interface ValidationResult {

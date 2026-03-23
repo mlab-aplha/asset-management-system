@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Modal } from '../../src/components/ui/Modal';
 import { AssetFormData, AssetFormProps, generateAssetId } from '../core/types/AssetFormTypes';
 import { useAssetFormValidation } from '../utils/useAssetFormValidation';
+import { useStudents } from '../hooks/useStudents';
 import './AssetForm.css';
 
 const AssetFormModal: React.FC<AssetFormProps> = ({
@@ -12,6 +13,7 @@ const AssetFormModal: React.FC<AssetFormProps> = ({
     mode,
     existingAssets = []
 }) => {
+    const { students, loadStudents } = useStudents();
     const [formData, setFormData] = useState<AssetFormData>({
         name: '',
         assetId: '',
@@ -29,6 +31,7 @@ const AssetFormModal: React.FC<AssetFormProps> = ({
         value: undefined,
         assignedTo: '',
         assignmentDate: undefined,
+        expectedReturnDate: undefined,
         notes: '',
         tags: []
     });
@@ -36,6 +39,12 @@ const AssetFormModal: React.FC<AssetFormProps> = ({
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { validateAssetForm } = useAssetFormValidation();
+
+    useEffect(() => {
+        if (isOpen) {
+            loadStudents();
+        }
+    }, [isOpen, loadStudents]);
 
     // Initialize form with asset data when editing
     useEffect(() => {
@@ -57,6 +66,7 @@ const AssetFormModal: React.FC<AssetFormProps> = ({
                 value: asset.value || undefined,
                 assignedTo: asset.assignedTo || '',
                 assignmentDate: asset.assignmentDate || undefined,
+                expectedReturnDate: asset.expectedReturnDate || undefined,
                 notes: asset.notes || '',
                 tags: asset.tags || []
             });
@@ -79,6 +89,7 @@ const AssetFormModal: React.FC<AssetFormProps> = ({
                 value: undefined,
                 assignedTo: '',
                 assignmentDate: undefined,
+                expectedReturnDate: undefined,
                 notes: '',
                 tags: []
             });
@@ -310,6 +321,70 @@ const AssetFormModal: React.FC<AssetFormProps> = ({
                     </div>
                 </div>
 
+                {/* Student Assignment Section */}
+                <div className="form-section">
+                    <h3 className="section-title">Student Assignment</h3>
+
+                    <div className="form-grid">
+                        <div className="form-group">
+                            <label htmlFor="assignedTo">
+                                Assign to Student
+                            </label>
+                            <select
+                                id="assignedTo"
+                                value={formData.assignedTo || ''}
+                                onChange={(e) => handleChange('assignedTo', e.target.value)}
+                                disabled={isSubmitting}
+                            >
+                                <option value="">-- Select Student --</option>
+                                {students.map(student => (
+                                    <option key={student.id} value={student.id}>
+                                        {student.firstName} {student.lastName} ({student.email})
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="field-hint">
+                                Assign this asset to a student
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="assignmentDate">
+                                Assignment Date
+                            </label>
+                            <input
+                                id="assignmentDate"
+                                type="date"
+                                value={formData.assignmentDate ? new Date(formData.assignmentDate).toISOString().split('T')[0] : ''}
+                                onChange={(e) => handleChange('assignmentDate', e.target.value ? new Date(e.target.value) : undefined)}
+                                disabled={isSubmitting}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="expectedReturnDate">
+                                Expected Return Date
+                            </label>
+                            <input
+                                id="expectedReturnDate"
+                                type="date"
+                                value={formData.expectedReturnDate ? new Date(formData.expectedReturnDate).toISOString().split('T')[0] : ''}
+                                onChange={(e) => handleChange('expectedReturnDate', e.target.value ? new Date(e.target.value) : undefined)}
+                                disabled={isSubmitting}
+                            />
+                        </div>
+                    </div>
+
+                    {formData.assignedTo && (
+                        <div className="assignment-info">
+                            <div className="info-banner">
+                                <span className="info-icon">📋</span>
+                                <span>This asset will be marked as "Assigned" when saved</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Optional Fields Section */}
                 <div className="form-section">
                     <h3 className="section-title">Optional Information</h3>
@@ -373,15 +448,58 @@ const AssetFormModal: React.FC<AssetFormProps> = ({
                             />
                         </div>
 
+                        <div className="form-group">
+                            <label htmlFor="purchaseDate">
+                                Purchase Date
+                            </label>
+                            <input
+                                id="purchaseDate"
+                                type="date"
+                                value={formData.purchaseDate ? new Date(formData.purchaseDate).toISOString().split('T')[0] : ''}
+                                onChange={(e) => handleChange('purchaseDate', e.target.value ? new Date(e.target.value) : undefined)}
+                                disabled={isSubmitting}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="purchasePrice">
+                                Purchase Price (ZAR)
+                            </label>
+                            <input
+                                id="purchasePrice"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={formData.purchasePrice || ''}
+                                onChange={(e) => handleChange('purchasePrice', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                placeholder="0.00"
+                                disabled={isSubmitting}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="tags">
+                                Tags
+                            </label>
+                            <input
+                                id="tags"
+                                type="text"
+                                value={formData.tags?.join(', ') || ''}
+                                onChange={(e) => handleChange('tags', e.target.value.split(',').map(tag => tag.trim()))}
+                                placeholder="e.g., laptop, apple, high-value"
+                                disabled={isSubmitting}
+                            />
+                        </div>
+
                         <div className="form-group full-width">
-                            <label htmlFor="description">
-                                Description
+                            <label htmlFor="notes">
+                                Notes
                             </label>
                             <textarea
-                                id="description"
-                                value={formData.description || ''}
-                                onChange={(e) => handleChange('description', e.target.value)}
-                                placeholder="Describe the asset..."
+                                id="notes"
+                                value={formData.notes || ''}
+                                onChange={(e) => handleChange('notes', e.target.value)}
+                                placeholder="Additional notes about this asset..."
                                 rows={3}
                                 disabled={isSubmitting}
                             />
