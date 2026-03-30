@@ -1,3 +1,4 @@
+// src/components/user/LocationSelector.tsx
 import React, { useState, useEffect } from 'react';
 import { LocationService } from '../../../backend-firebase/src/services/LocationService';
 
@@ -9,7 +10,7 @@ interface Location {
 }
 
 interface LocationSelectorProps {
-    selectedLocations: string[]; // Array of location IDs
+    selectedLocations: string[];
     onChange: (locationIds: string[]) => void;
     disabled?: boolean;
     label?: string;
@@ -19,32 +20,30 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     selectedLocations = [],
     onChange,
     disabled = false,
-    label = "Assigned Locations"
+    label = 'Assigned Locations',
 }) => {
     const [locations, setLocations] = useState<Location[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
 
-    useEffect(() => {
-        loadLocations();
-    }, []);
+    useEffect(() => { loadLocations(); }, []);
 
     const loadLocations = async () => {
         setLoading(true);
         try {
             const result = await LocationService.getAllLocations();
             if (result.success && result.data) {
-                // Filter only active locations
-                const activeLocations = result.data
-                    .filter(loc => loc.status === 'active')
-                    .map(loc => ({
-                        id: loc.id,
-                        name: loc.name,
-                        code: loc.code || '',
-                        type: loc.type || 'hub'
-                    }));
-                setLocations(activeLocations);
+                setLocations(
+                    result.data
+                        .filter(loc => loc.status === 'active')
+                        .map(loc => ({
+                            id: loc.id,
+                            name: loc.name,
+                            code: loc.code || '',
+                            type: loc.type || 'hub',
+                        })),
+                );
             }
         } catch (error) {
             console.error('Error loading locations:', error);
@@ -53,49 +52,54 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         }
     };
 
-    const filteredLocations = locations.filter(loc =>
+    const filtered = locations.filter(loc =>
         loc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        loc.code.toLowerCase().includes(searchTerm.toLowerCase())
+        loc.code.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
-    const handleToggleLocation = (locationId: string) => {
-        if (selectedLocations.includes(locationId)) {
-            onChange(selectedLocations.filter(id => id !== locationId));
-        } else {
-            onChange([...selectedLocations, locationId]);
-        }
+    const handleToggle = (id: string) => {
+        onChange(
+            selectedLocations.includes(id)
+                ? selectedLocations.filter(x => x !== id)
+                : [...selectedLocations, id],
+        );
     };
 
     const handleSelectAll = () => {
-        if (selectedLocations.length === locations.length) {
-            onChange([]);
-        } else {
-            onChange(locations.map(loc => loc.id));
-        }
+        onChange(
+            selectedLocations.length === locations.length
+                ? []
+                : locations.map(l => l.id),
+        );
     };
 
     return (
         <div className="location-selector">
-            <label className="form-label">
-                {label} <span className="location-count">{selectedLocations.length} selected</span>
+            {/* ── Label properly associated via htmlFor ── */}
+            <label htmlFor="location-search" className="form-label">
+                {label}{' '}
+                <span className="location-count">{selectedLocations.length} selected</span>
             </label>
 
             <div className="location-selector-container">
-                {/* Search input */}
+                {/* Search input — now has id + name + autoComplete */}
                 <div className="location-search">
-                    <span className="material-icons search-icon">search</span>
+                    <span className="material-icons search-icon" aria-hidden="true">search</span>
                     <input
+                        id="location-search"
+                        name="locationSearch"
                         type="text"
                         placeholder="Search locations..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={e => setSearchTerm(e.target.value)}
                         onFocus={() => setShowDropdown(true)}
                         disabled={disabled}
                         className="location-search-input"
+                        autoComplete="off"
                     />
                 </div>
 
-                {/* Selected locations chips */}
+                {/* Selected chips */}
                 {selectedLocations.length > 0 && (
                     <div className="selected-locations">
                         {locations
@@ -107,17 +111,18 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                                     <button
                                         type="button"
                                         className="location-chip-remove"
-                                        onClick={() => handleToggleLocation(loc.id)}
+                                        onClick={() => handleToggle(loc.id)}
                                         disabled={disabled}
+                                        aria-label={`Remove ${loc.name}`}
                                     >
-                                        <span className="material-icons">close</span>
+                                        <span className="material-icons" aria-hidden="true">close</span>
                                     </button>
                                 </div>
                             ))}
                     </div>
                 )}
 
-                {/* Dropdown for location selection */}
+                {/* Dropdown */}
                 {showDropdown && !disabled && (
                     <div className="location-dropdown">
                         <div className="dropdown-header">
@@ -126,29 +131,34 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                                 className="select-all-btn"
                                 onClick={handleSelectAll}
                             >
-                                {selectedLocations.length === locations.length ? 'Deselect All' : 'Select All'}
+                                {selectedLocations.length === locations.length
+                                    ? 'Deselect All'
+                                    : 'Select All'}
                             </button>
                             <button
                                 type="button"
                                 className="close-dropdown"
                                 onClick={() => setShowDropdown(false)}
+                                aria-label="Close location dropdown"
                             >
-                                <span className="material-icons">close</span>
+                                <span className="material-icons" aria-hidden="true">close</span>
                             </button>
                         </div>
 
                         <div className="locations-list">
                             {loading ? (
                                 <div className="loading-indicator">
-                                    <div className="spinner"></div>
-                                    <span>Loading locations...</span>
+                                    <div className="spinner" />
+                                    <span>Loading locations…</span>
                                 </div>
-                            ) : filteredLocations.length > 0 ? (
-                                filteredLocations.map(loc => (
+                            ) : filtered.length > 0 ? (
+                                filtered.map(loc => (
                                     <div
                                         key={loc.id}
                                         className={`location-item ${selectedLocations.includes(loc.id) ? 'selected' : ''}`}
-                                        onClick={() => handleToggleLocation(loc.id)}
+                                        onClick={() => handleToggle(loc.id)}
+                                        role="option"
+                                        aria-selected={selectedLocations.includes(loc.id)}
                                     >
                                         <div className="location-item-info">
                                             <span className="location-item-name">{loc.name}</span>
@@ -156,13 +166,15 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                                             <span className="location-item-type">{loc.type}</span>
                                         </div>
                                         {selectedLocations.includes(loc.id) && (
-                                            <span className="material-icons check-icon">check_circle</span>
+                                            <span className="material-icons check-icon" aria-hidden="true">
+                                                check_circle
+                                            </span>
                                         )}
                                     </div>
                                 ))
                             ) : (
                                 <div className="no-results">
-                                    <span className="material-icons">location_off</span>
+                                    <span className="material-icons" aria-hidden="true">location_off</span>
                                     <p>No locations found</p>
                                 </div>
                             )}

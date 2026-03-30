@@ -12,104 +12,117 @@ import { FacilitatorDashboardPage } from './pages/FacilitatorDashboard/Facilitat
 import { AdminRequestsPage } from './pages/AdminRequestsPage/AdminRequestsPage';
 import { FacilitatorRequestsPage } from './pages/FacilitatorRequestsPage/FacilitatorRequestsPage';
 import { AssetRequestsPage } from './pages/AssetRequests/AssetRequestsPage';
-import { ProtectedRoute } from '../src/components/auth/ProtectedRoute';
 import { FacilitatorAssetRegistryPage } from './pages/FacilitatorAssetRegistry/FacilitatorAssetRegistryPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { ManagerDashboardPage } from './pages/Managerdashboardpage/Managerdashboardpage';
+import { ITDashboardPage } from './pages/Itdashboardpage/Itdashboardpage';
+import { StudentDashboardPage } from './pages/Studentdashboardpage/Studentdashboardpage';
+import { AssetPortalPage } from './pages/Assetportalpage/Assetportalpage';
+import { MaintenancePage } from './pages/Maintenancepage/Maintenancepage';
 import './App.css';
 
 function App() {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <Routes>
-        {/* Public routes */}
+        {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        {/* Admin only routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/requests"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdminRequestsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/users"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <UserManagementPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/locations"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <LocationManagementPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Super Admin only */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
+            <DashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/requests" element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
+            <AdminRequestsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/users" element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
+            <UserManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/locations" element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
+            <LocationManagementPage />
+          </ProtectedRoute>
+        } />
 
-        {/* Facilitator only routes */}
-        <Route
-          path="/facilitator/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['facilitator']}>
-              <FacilitatorDashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/facilitator/requests"
-          element={
-            <ProtectedRoute allowedRoles={['facilitator']}>
-              <FacilitatorRequestsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/facilitator/assets"
-          element={
-            <ProtectedRoute allowedRoles={['facilitator']}>
-              <FacilitatorAssetRegistryPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Hub Manager */}
+        <Route path="/manager/dashboard" element={
+          <ProtectedRoute allowedRoles={['hub_manager']}>
+            <ManagerDashboardPage />
+          </ProtectedRoute>
+        } />
 
-        {/* Shared routes - both roles can access */}
-        <Route
-          path="/assets"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'facilitator']}>
-              <AssetRegistryPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/assets/:id"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'facilitator']}>
-              <AssetDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/asset-requests"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'facilitator']}>
-              <AssetRequestsPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* IT */}
+        <Route path="/it/dashboard" element={
+          <ProtectedRoute allowedRoles={['it']}>
+            <ITDashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/it/maintenance" element={
+          <ProtectedRoute allowedRoles={['it', 'super_admin']}>
+            <MaintenancePage />
+          </ProtectedRoute>
+        } />
+
+        {/* Student */}
+        <Route path="/student/dashboard" element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentDashboardPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Asset Facilitator */}
+        <Route path="/facilitator/dashboard" element={
+          <ProtectedRoute allowedRoles={['asset_facilitator']}>
+            <FacilitatorDashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/facilitator/requests" element={
+          <ProtectedRoute allowedRoles={['asset_facilitator']}>
+            <FacilitatorRequestsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/facilitator/assets" element={
+          <ProtectedRoute allowedRoles={['asset_facilitator']}>
+            <FacilitatorAssetRegistryPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Asset Portal — all roles */}
+        <Route path="/asset-portal" element={
+          <ProtectedRoute allowedRoles={['super_admin', 'hub_manager', 'it', 'asset_facilitator', 'student']}>
+            <AssetPortalPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Shared */}
+        <Route path="/assets" element={
+          <ProtectedRoute allowedRoles={['super_admin', 'asset_facilitator']}>
+            <AssetRegistryPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/assets/:id" element={
+          <ProtectedRoute allowedRoles={['super_admin', 'asset_facilitator']}>
+            <AssetDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/asset-requests" element={
+          <ProtectedRoute allowedRoles={['super_admin', 'asset_facilitator']}>
+            <AssetRequestsPage />
+          </ProtectedRoute>
+        } />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

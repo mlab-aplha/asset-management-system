@@ -1,3 +1,5 @@
+/* src/pages/auth/auth.css */
+
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -47,12 +49,13 @@
 .auth-logo-icon {
   width: 3rem;
   height: 3rem;
-  background-color: var(--lime);
+  background: linear-gradient(135deg, var(--lime) 0%, var(--lime-light) 100%);
   border-radius: 0.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.2s ease;
+  box-shadow: var(--shadow-accent);
 }
 
 .auth-logo-icon:hover {
@@ -69,8 +72,7 @@
   font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: -0.025em;
-  color: white;
-  background: linear-gradient(135deg, #ffffff 0%, #94c73d 100%);
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--lime) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -78,7 +80,7 @@
 
 .auth-logo-subtext {
   font-weight: 400;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 0.875rem;
   margin-left: 0.25rem;
 }
@@ -90,7 +92,7 @@
 }
 
 .auth-header-text {
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -98,17 +100,17 @@
 .auth-header-button {
   font-size: 0.875rem;
   font-weight: 700;
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   padding: 0.625rem 1.25rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--ease);
 }
 
 .auth-header-button:hover {
-  background: rgba(148, 199, 61, 0.2);
+  background: var(--lime-dim);
   border-color: var(--lime);
   color: var(--lime);
 }
@@ -125,16 +127,14 @@
 }
 
 .auth-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   border-radius: 1.5rem;
   padding: 3rem;
   width: 100%;
   max-width: 32rem;
-  box-shadow: 
-    0 25px 50px -12px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(148, 199, 61, 0.1);
+  box-shadow: var(--shadow-heavy), 0 0 0 1px var(--lime-dim);
   position: relative;
   overflow: hidden;
   animation: fadeIn 0.5s ease-out;
@@ -147,7 +147,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--lime), transparent);
+  background: linear-gradient(90deg, var(--lime), var(--lime-light));
 }
 
 .auth-card-header {
@@ -158,13 +158,16 @@
 .auth-title {
   font-size: 2.25rem;
   font-weight: 900;
-  color: white;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--lime) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 0.75rem;
   letter-spacing: -0.025em;
 }
 
 .auth-subtitle {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 1rem;
   line-height: 1.6;
   max-width: 24rem;
@@ -186,7 +189,7 @@
   background-color: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 0.75rem;
-  color: #f87171;
+  color: var(--danger);
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -196,7 +199,7 @@
   flex-shrink: 0;
 }
 
-/* Password Field Wrapper - FIXED */
+/* Password Field Wrapper */
 .password-field-wrapper {
   position: relative;
   width: 100%;
@@ -205,7 +208,7 @@
   gap: 0.5rem;
 }
 
-/* Forgot Password Link - FIXED positioning */
+/* Forgot Password Link */
 .forgot-password-wrapper {
   position: absolute;
   right: 0;
@@ -220,7 +223,7 @@
   color: var(--lime);
   text-decoration: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--ease);
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   background: transparent;
@@ -229,10 +232,10 @@
 
 .forgot-password-link:hover {
   text-decoration: underline;
-  background: rgba(148, 199, 61, 0.1);
+  background: var(--lime-dim);
 }
 
-/* Password Toggle Button - FIXED positioning */
+/* Password Toggle Button */
 .password-toggle-btn {
   position: absolute;
   right: 12px;
@@ -245,22 +248,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
-  transition: all 0.2s ease;
+  color: var(--text-muted);
+  transition: var(--ease);
   z-index: 2;
   border-radius: 0.5rem;
 }
 
 .password-toggle-btn:hover {
   color: var(--lime);
-  background: rgba(148, 199, 61, 0.1);
+  background: var(--lime-dim);
 }
 
 .password-toggle-btn .material-icons {
   font-size: 1.25rem;
 }
 
-/* Input Components - FIXED to work with password toggle */
+/* Input Components */
 .input-field {
   display: flex;
   flex-direction: column;
@@ -273,7 +276,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #d1d5db;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -297,9 +300,9 @@
   left: 1rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 1.25rem;
-  transition: all 0.2s ease;
+  transition: var(--ease);
   z-index: 1;
 }
 
@@ -310,42 +313,40 @@
 
 .input-element {
   width: 100%;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 0.75rem;
-  padding: 1.125rem 3.25rem 1.125rem 3.25rem; /* Right padding for toggle button */
-  color: white;
+  padding: 1.125rem 3.25rem 1.125rem 3.25rem;
+  color: var(--text-primary);
   font-size: 1rem;
   font-family: 'Manrope', sans-serif;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: var(--ease);
 }
 
 /* Special styling for password input to accommodate toggle button */
 .password-field-wrapper .input-element {
-  padding-right: 3.25rem; /* Space for toggle button */
+  padding-right: 3.25rem;
 }
 
 .input-element:focus {
   outline: none;
-  border-color: rgba(148, 199, 61, 0.5);
-  box-shadow: 
-    0 0 0 2px rgba(148, 199, 61, 0.25),
-    0 4px 12px rgba(0, 0, 0, 0.1);
-  background-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--lime);
+  box-shadow: 0 0 0 2px var(--lime-dim), 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-color: var(--glass-bg-h);
 }
 
 .input-element::placeholder {
-  color: #6b7280;
+  color: var(--text-muted);
   font-weight: 400;
 }
 
 .input-error {
-  border-color: rgba(239, 68, 68, 0.5) !important;
+  border-color: var(--danger) !important;
 }
 
 .input-error-message {
-  color: #f87171;
+  color: var(--danger);
   font-size: 0.75rem;
   margin-top: 0.5rem;
   padding-left: 0.5rem;
@@ -357,7 +358,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   border-radius: 0.75rem;
   margin: 0.5rem 0 1rem;
 }
@@ -366,11 +367,11 @@
   width: 1.125rem;
   height: 1.125rem;
   border-radius: 0.375rem;
-  border: 1px solid #4b5563;
+  border: 1px solid var(--gray-500);
   background-color: var(--navy);
   accent-color: var(--lime);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--ease);
 }
 
 .remember-device input[type="checkbox"]:checked {
@@ -379,7 +380,7 @@
 }
 
 .remember-device label {
-  color: #d1d5db;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -389,7 +390,7 @@
 /* Buttons */
 .auth-button {
   width: 100%;
-  background: linear-gradient(135deg, var(--lime) 0%, #7ab02e 100%);
+  background: linear-gradient(135deg, var(--lime) 0%, var(--lime-light) 100%);
   color: var(--navy);
   padding: 1.125rem;
   border-radius: 0.75rem;
@@ -398,14 +399,12 @@
   font-family: 'Manrope', sans-serif;
   border: none;
   cursor: pointer;
-  box-shadow: 
-    0 10px 30px rgba(148, 199, 61, 0.3),
-    0 0 0 1px rgba(148, 199, 61, 0.2);
+  box-shadow: var(--shadow-accent);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  transition: all 0.3s ease;
+  transition: var(--ease);
   position: relative;
   overflow: hidden;
   margin-top: 0.5rem;
@@ -418,16 +417,14 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
   transition: left 0.6s ease;
 }
 
 .auth-button:hover {
   transform: translateY(-3px);
-  box-shadow: 
-    0 15px 40px rgba(148, 199, 61, 0.4),
-    0 0 0 1px rgba(148, 199, 61, 0.3);
-  background: linear-gradient(135deg, #a5d747 0%, var(--lime) 100%);
+  box-shadow: 0 8px 28px rgba(103, 148, 54, 0.4);
+  background: linear-gradient(135deg, var(--lime-light) 0%, var(--lime) 100%);
 }
 
 .auth-button:hover::before {
@@ -446,13 +443,13 @@
 
 .auth-button-loading:hover {
   transform: none;
-  box-shadow: 0 10px 30px rgba(148, 199, 61, 0.3);
+  box-shadow: var(--shadow-accent);
 }
 
 .auth-button-spinner {
   width: 1.25rem;
   height: 1.25rem;
-  border: 2px solid rgba(0, 24, 45, 0.3);
+  border: 2px solid rgba(6, 71, 137, 0.3);
   border-top-color: var(--navy);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -482,7 +479,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-bottom: 1.5rem;
 }
 
@@ -496,12 +493,12 @@
   width: 3rem;
   height: 3rem;
   border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: var(--ease);
   position: relative;
   overflow: hidden;
 }
@@ -513,15 +510,15 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(148, 199, 61, 0.1), transparent);
+  background: linear-gradient(135deg, var(--lime-dim), transparent);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .security-icon:hover {
   transform: translateY(-4px);
-  border-color: rgba(148, 199, 61, 0.3);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  border-color: var(--lime);
+  box-shadow: var(--shadow-medium);
 }
 
 .security-icon:hover::before {
@@ -551,7 +548,7 @@
   gap: 0.75rem;
   margin-bottom: 1.5rem;
   opacity: 0.7;
-  transition: opacity 0.2s ease;
+  transition: var(--ease);
 }
 
 .security-notice:hover {
@@ -566,7 +563,7 @@
 .security-notice span {
   font-size: 0.875rem;
   font-weight: 500;
-  color: white;
+  color: var(--text-primary);
   letter-spacing: 0.025em;
 }
 
@@ -582,16 +579,16 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #6b7280;
+  color: var(--text-muted);
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: var(--ease);
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
 }
 
 .footer-links a:hover {
   color: var(--lime);
-  background: rgba(148, 199, 61, 0.1);
+  background: var(--lime-dim);
 }
 
 /* Forgot Password Page Specific */
@@ -603,8 +600,8 @@
   width: 5rem;
   height: 5rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(148, 199, 61, 0.1), rgba(148, 199, 61, 0.05));
-  border: 1px solid rgba(148, 199, 61, 0.2);
+  background: linear-gradient(135deg, var(--lime-dim), rgba(103, 148, 54, 0.05));
+  border: 1px solid var(--glass-border-h);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -647,20 +644,20 @@
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--ease);
 }
 
 .back-button:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  background: var(--glass-bg-h);
   border-color: var(--lime);
   transform: translateX(-4px);
 }
@@ -677,10 +674,10 @@
 /* Animations */
 @keyframes pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(148, 199, 61, 0.2);
+    box-shadow: 0 0 0 0 rgba(103, 148, 54, 0.2);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(148, 199, 61, 0);
+    box-shadow: 0 0 0 10px rgba(103, 148, 54, 0);
   }
 }
 

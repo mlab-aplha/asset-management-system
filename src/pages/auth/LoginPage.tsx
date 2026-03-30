@@ -1,21 +1,31 @@
+// src/pages/auth/LoginPage.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from '../../../backend-firebase/src/services/AuthService';
 import type { AuthCredentials } from '../../core/types/auth';
-import { InputField } from '../../components/auth/InputField';
 import { AuthButton } from '../../components/auth/Button';
 import { userService } from '../../../backend-firebase/src/services/UserService';
+import './auth.css';
+
+const ROLE_HOME: Record<string, string> = {
+    super_admin: '/dashboard',
+    hub_manager: '/manager/dashboard',
+    it: '/it/dashboard',
+    asset_facilitator: '/facilitator/dashboard',
+    student: '/student/dashboard',
+};
 
 export const LoginPage: React.FC = () => {
     const navigate = useNavigate();
+
     const [credentials, setCredentials] = useState<AuthCredentials>({
         email: '',
         password: '',
-        rememberDevice: false
+        rememberDevice: false,
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [showPassword, setShowPassword] = useState(false); // Add this state
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,49 +36,41 @@ export const LoginPage: React.FC = () => {
             const response = await AuthService.login(credentials.email, credentials.password);
 
             if (response.success && response.user) {
-                const userData = await userService.getUserById(response.user.uid);
+                const users = await userService.getUsers();
+                const userData = users.find(u => u.uid === response.user!.uid) ?? null;
 
-                if (userData?.role === 'admin') {
-                    navigate('/dashboard');
-                } else {
-                    navigate('/facilitator/dashboard');
-                }
+                const destination = userData?.role
+                    ? (ROLE_HOME[userData.role] ?? '/facilitator/dashboard')
+                    : '/facilitator/dashboard';
+
+                navigate(destination);
             } else {
-                const errorMessage = response.message || '';
-                if (errorMessage.includes('auth/invalid-credential') ||
-                    errorMessage.includes('auth/user-not-found') ||
-                    errorMessage.includes('auth/wrong-password')) {
+                const msg = response.message ?? '';
+                if (
+                    msg.includes('auth/invalid-credential') ||
+                    msg.includes('auth/user-not-found') ||
+                    msg.includes('auth/wrong-password')
+                ) {
                     setError('Invalid email or password. Please try again.');
                 } else {
-                    setError(response.message || 'Invalid credentials');
+                    setError(msg || 'Invalid credentials');
                 }
             }
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'An error occurred. Please try again.';
-
-            if (errorMessage.includes('auth/invalid-credential') ||
-                errorMessage.includes('auth/user-not-found') ||
-                errorMessage.includes('auth/wrong-password')) {
+            const msg = err instanceof Error ? err.message : 'An error occurred. Please try again.';
+            if (
+                msg.includes('auth/invalid-credential') ||
+                msg.includes('auth/user-not-found') ||
+                msg.includes('auth/wrong-password')
+            ) {
                 setError('Invalid email or password. Please try again.');
             } else {
-                setError(errorMessage);
+                setError(msg);
             }
             console.error('Login error:', err);
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleForgotPassword = () => {
-        navigate('/forgot-password');
-    };
-
-    const handleContactAdmin = () => {
-        window.location.href = 'mailto:admin@mlab.co.za?subject=AMS%20Account%20Request';
-    };
-
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
     };
 
     return (
@@ -93,10 +95,15 @@ export const LoginPage: React.FC = () => {
                         mLab <span className="auth-logo-subtext">AMS</span>
                     </h2>
                 </div>
-
                 <div className="auth-header-actions">
                     <span className="auth-header-text">Don't have an account?</span>
-                    <button className="auth-header-button" onClick={handleContactAdmin}>
+                    <button
+                        className="auth-header-button"
+                        type="button"
+                        onClick={() => {
+                            window.location.href = 'mailto:admin@mlab.co.za?subject=AMS%20Account%20Request';
+                        }}
+                    >
                         Contact Admin
                     </button>
                 </div>
@@ -111,75 +118,98 @@ export const LoginPage: React.FC = () => {
                         </p>
                     </div>
 
-                    <form className="auth-form" onSubmit={handleSubmit}>
+                    <form className="auth-form" onSubmit={handleSubmit} noValidate>
                         {error && (
-                            <div className="auth-error">
-                                <span className="material-icons">error</span>
+                            <div className="auth-error" role="alert">
+                                <span className="material-icons" aria-hidden="true">error</span>
                                 {error}
                             </div>
                         )}
 
-                        <InputField
-                            label="Email Address"
-                            icon="mail"
-                            type="email"
-                            placeholder="name@company.com"
-                            value={credentials.email}
-                            onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
-                            required
-                        />
+                        {/* Email */}
+                        <div className="input-field">
+                            <label htmlFor="login-email" className="input-label">
+                                Email Address
+                            </label>
+                            <div className="input-container">
+                                <span className="input-icon material-icons" aria-hidden="true">mail</span>
+                                <input
+                                    id="login-email"
+                                    name="email"
+                                    type="email"
+                                    className="input-element"
+                                    placeholder="name@company.com"
+                                    value={credentials.email}
+                                    onChange={e => setCredentials({ ...credentials, email: e.target.value })}
+                                    autoComplete="email"
+                                    required
+                                />
+                            </div>
+                        </div>
 
-                        <div className="password-field-wrapper">
-                            <InputField
-                                label="Password"
-                                icon="lock"
-                                type={showPassword ? "text" : "password"} // Toggle between text and password
-                                placeholder="******"
-                                value={credentials.password}
-                                onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                                required
-                            />
-                            {/* Add eye icon button */}
-                            <button
-                                type="button"
-                                className="password-toggle-btn"
-                                onClick={togglePasswordVisibility}
-                                aria-label={showPassword ? "Hide password" : "Show password"}
-                            >
-                                <span className="material-icons">
-                                    {showPassword ? "visibility_off" : "visibility"}
-                                </span>
-                            </button>
+                        {/* Password */}
+                        <div className="input-field password-field-wrapper">
+                            <label htmlFor="login-password" className="input-label">
+                                Password
+                            </label>
+                            <div className="input-container">
+                                <span className="input-icon material-icons" aria-hidden="true">lock</span>
+                                <input
+                                    id="login-password"
+                                    name="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    className="input-element"
+                                    placeholder="******"
+                                    value={credentials.password}
+                                    onChange={e => setCredentials({ ...credentials, password: e.target.value })}
+                                    autoComplete="current-password"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    className="password-toggle-btn"
+                                    onClick={() => setShowPassword(v => !v)}
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                >
+                                    <span className="material-icons" aria-hidden="true">
+                                        {showPassword ? 'visibility_off' : 'visibility'}
+                                    </span>
+                                </button>
+                            </div>
                             <div className="forgot-password-wrapper">
-                                <a className="forgot-password-link" onClick={handleForgotPassword}>
+                                <a
+                                    className="forgot-password-link"
+                                    onClick={() => navigate('/forgot-password')}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={e => { if (e.key === 'Enter') navigate('/forgot-password'); }}
+                                    style={{ cursor: 'pointer' }}
+                                >
                                     Forgot Password?
                                 </a>
                             </div>
                         </div>
 
+                        {/* Remember device */}
                         <div className="remember-device">
                             <input
                                 type="checkbox"
-                                id="remember"
+                                id="remember-device"
+                                name="rememberDevice"
                                 checked={credentials.rememberDevice}
-                                onChange={(e) => setCredentials({ ...credentials, rememberDevice: e.target.checked })}
+                                onChange={e => setCredentials({ ...credentials, rememberDevice: e.target.checked })}
                             />
-                            <label htmlFor="remember">Remember this device</label>
+                            <label htmlFor="remember-device">Remember this device</label>
                         </div>
 
-                        <AuthButton
-                            type="submit"
-                            loading={loading}
-                            icon="login"
-                            iconPosition="right"
-                        >
+                        <AuthButton type="submit" loading={loading} icon="login" iconPosition="right">
                             Sign In
                         </AuthButton>
                     </form>
 
                     <div className="security-verification">
                         <p className="security-title">Security Verification</p>
-                        <div className="security-icons">
+                        <div className="security-icons" aria-hidden="true">
                             <div className="security-icon">
                                 <span className="material-icons">fingerprint</span>
                             </div>
@@ -196,10 +226,9 @@ export const LoginPage: React.FC = () => {
 
             <footer className="auth-footer">
                 <div className="security-notice">
-                    <span className="material-icons">shield</span>
+                    <span className="material-icons" aria-hidden="true">shield</span>
                     <span>Secured by Neptune Tech Encryption</span>
                 </div>
-
                 <div className="footer-links">
                     <a href="#">Privacy Policy</a>
                     <a href="#">System Status</a>

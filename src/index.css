@@ -1,3 +1,6 @@
+/* src/index.css */
+@import './App.css';
+
 body {
   margin: 0;
   font-family: 'Manrope', sans-serif;
@@ -5,3 +8,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Ensure all elements use border-box */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}

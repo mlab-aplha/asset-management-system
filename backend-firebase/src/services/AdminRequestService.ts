@@ -1,6 +1,6 @@
 // backend-firebase/src/services/AdminRequestService.ts
 import { RequestService, ServiceResponse } from './RequestService';
-import { IRequest, IRequestFilters } from '../../../src/core/types/request.types';
+import { IRequest, IRequestFilters, FulfillmentInput } from '../../../src/core/types/request.types';
 
 export class AdminRequestService extends RequestService {
     private static adminInstance: AdminRequestService;
@@ -17,7 +17,6 @@ export class AdminRequestService extends RequestService {
     }
 
     async getRequests(filters?: IRequestFilters): Promise<IRequest[]> {
-        // Admin can see all requests, but may have additional filters
         const results = await super.getRequests({
             status: filters?.status,
             priority: filters?.priority,
@@ -29,17 +28,31 @@ export class AdminRequestService extends RequestService {
             dateTo: filters?.dateTo
         });
 
-        // Convert AssetRequest[] to IRequest[]
         return results.map(req => ({
             ...req,
-            id: req.id || '', // Ensure id is string (required in IRequest)
+            id: req.id || '',
         })) as IRequest[];
     }
 
-    async approveRequest(requestId: string): Promise<ServiceResponse> {
+    /**
+     * Approve a request - Admin approves at 'admin' level
+     * Must provide all required fields for ApproveInput
+     */
+    async approveRequest(
+        requestId: string,
+        approvedBy: string,
+        approvedByName: string,
+        comments?: string
+    ): Promise<ServiceResponse> {
         try {
-            // Use the simplified static method from RequestService (only needs requestId)
-            return await RequestService.approveRequest(requestId);
+            // Pass the correct object structure that ApproveInput expects
+            return await RequestService.approveRequest({
+                requestId: requestId,
+                level: 'admin',
+                approvedBy: approvedBy,
+                approvedByName: approvedByName,
+                comments: comments
+            });
         } catch (error) {
             console.error('Error approving request:', error);
             return {
@@ -49,10 +62,23 @@ export class AdminRequestService extends RequestService {
         }
     }
 
-    async rejectRequest(requestId: string, reason: string): Promise<ServiceResponse> {
+    /**
+     * Reject a request - Must provide all required fields for RejectInput
+     */
+    async rejectRequest(
+        requestId: string,
+        reason: string,
+        rejectedBy: string,
+        rejectedByName: string
+    ): Promise<ServiceResponse> {
         try {
-            // Use the simplified static method from RequestService (only needs requestId and reason)
-            return await RequestService.rejectRequest(requestId, reason);
+            // Pass the correct object structure that RejectInput expects
+            return await RequestService.rejectRequest({
+                requestId: requestId,
+                reason: reason,
+                rejectedBy: rejectedBy,
+                rejectedByName: rejectedByName
+            });
         } catch (error) {
             console.error('Error rejecting request:', error);
             return {
@@ -62,13 +88,16 @@ export class AdminRequestService extends RequestService {
         }
     }
 
+    /**
+     * Fulfill a request
+     */
     async fulfillRequest(
         requestId: string,
-        fulfillmentData: { notes?: string; items?: Array<{ itemId: string; fulfilledQuantity: number; notes?: string; }> }
+        fulfillmentData: FulfillmentInput,
+        fulfilledBy: string
     ): Promise<ServiceResponse> {
         try {
-            // Use the simplified static method from RequestService (only needs requestId and fulfillmentData)
-            return await RequestService.fulfillRequest(requestId, fulfillmentData);
+            return await RequestService.fulfillRequest(requestId, fulfillmentData, fulfilledBy);
         } catch (error) {
             console.error('Error fulfilling request:', error);
             return {
@@ -103,7 +132,7 @@ export class AdminRequestService extends RequestService {
     }
 
     async getPendingRequests(): Promise<IRequest[]> {
-        return this.getRequests({ status: ['pending', 'under_review'] });
+        return this.getRequests({ status: ['pending', 'under_review', 'pending_admin'] });
     }
 
     async getRequestsByStatus(statuses: string[]): Promise<IRequest[]> {

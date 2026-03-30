@@ -1,42 +1,105 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
-@import './pages/landing.css';
-@import './pages/auth/auth.css';
-@import './components/ui/ui.css';
-@import './components/layout/layout.css';
-@import './features/adin_features/dashboard.css';
 
-/* Global Variables and Reset */
+/* ============================================================
+   GLOBAL VARIABLES — Blue & Green Theme
+   ============================================================ */
 :root {
-  --navy: #00182d;
-  --teal: #073f4e;
-  --lime: #94c73d;
-  --lime-light: #a5e04a;
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --shadow-light: 0 4px 20px rgba(0, 0, 0, 0.1);
-  --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.15);
-  --shadow-heavy: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  /* Core Palette - Deep Sapphire & Steel Blue */
+  --navy:        #064789;
+  --navy-mid:    #1a5a9e;
+  --teal:        #2a6aae;
+  --teal-light:  #427aa1;
+
+  /* Accent - Fresh Forest & Lime Green */
+  --lime:        #679436;
+  --lime-light:  #a5be00;
+  --lime-dim:    rgba(103, 148, 54, 0.15);
+
+  /* Gray Scale - Cool neutrals with ice blue undertone */
+  --gray-900:    #0a1c2f;
+  --gray-800:    #1a2c3f;
+  --gray-700:    #2a3c4f;
+  --gray-600:    #3a4c5f;
+  --gray-500:    #5a6c7f;
+  --gray-400:    #7a8c9f;
+  --gray-300:    #9aacbf;
+  --gray-200:    #bacadf;
+  --gray-100:    #dae2ef;
+  --gray-50:     #ebf2fa;
+
+  /* Semantic - Ice Blue for text */
+  --text-primary:   #ebf2fa;
+  --text-secondary: #bacadf;
+  --text-muted:     #9aacbf;
+
+  /* Glass effects */
+  --glass-border:   rgba(255, 255, 255, 0.1);
+  --glass-border-h: rgba(103, 148, 54, 0.35);
+  --glass-bg:       rgba(255, 255, 255, 0.05);
+  --glass-bg-h:     rgba(255, 255, 255, 0.08);
+
+  /* Shadows */
+  --shadow-light:   0 2px 12px rgba(0, 0, 0, 0.15);
+  --shadow-medium:  0 8px 28px rgba(0, 0, 0, 0.25);
+  --shadow-heavy:   0 20px 50px rgba(0, 0, 0, 0.35);
+  --shadow-accent:  0 4px 20px rgba(103, 148, 54, 0.25);
+
+  /* Status Colors */
+  --success:   #679436;
+  --warning:   #fbbf24;
+  --danger:    #ef4444;
+  --info:      #427aa1;
+
+  /* Transitions */
+  --ease:      all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-slow: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Additional variables needed for components */
+  --primary-color: var(--lime);
+  --primary-light: var(--lime-light);
+  --primary-glow: var(--lime-dim);
+  --stroke: var(--glass-border);
+  --stroke-accent: var(--glass-border-h);
+  --stroke-medium: var(--glass-border);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-pill: 2rem;
+  --navy-surface: var(--navy);
+  --transition-fast: var(--ease);
+  --transition-normal: var(--ease);
+  --transition-slow: var(--ease-slow);
 }
 
-/* Reset and base styles */
-* {
+/* ============================================================
+   RESET
+   ============================================================ */
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: 'Manrope', sans-serif;
-  color: white;
+  color: var(--text-primary);
   background-color: var(--navy);
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-image: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(103, 148, 54, 0.08) 0%, transparent 70%);
 }
 
-/* Material Icons */
-.material-icons, 
+/* ============================================================
+   MATERIAL ICONS
+   ============================================================ */
+.material-icons,
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
@@ -54,23 +117,53 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Common utility classes */
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
 .glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  transition: var(--ease);
+}
+
+.glass-card:hover {
+  background: var(--glass-bg-h);
+  border-color: var(--glass-border-h);
+  box-shadow: var(--shadow-medium);
 }
 
 .hero-gradient {
-  background: radial-gradient(circle at top right, var(--teal), var(--navy));
+  background: radial-gradient(ellipse at top right, var(--teal) 0%, var(--navy) 65%);
 }
 
-/* Animations */
+.text-accent   { color: var(--lime); }
+.text-muted    { color: var(--text-muted); }
+.text-secondary{ color: var(--text-secondary); }
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--gray-800); }
+::-webkit-scrollbar-thumb  { background: var(--gray-500); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--lime); }
+
+/* ============================================================
+   SELECTION
+   ============================================================ */
+::selection {
+  background: rgba(103, 148, 54, 0.3);
+  color: #fff;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
 @keyframes ping {
-  75%, 100% {
-    transform: scale(2);
-    opacity: 0;
-  }
+  75%, 100% { transform: scale(2); opacity: 0; }
 }
 
 @keyframes spin {
@@ -78,10 +171,58 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ============================================================
+   COMMON BUTTON BASE
+   ============================================================ */
+button {
+  font-family: 'Manrope', sans-serif;
+  cursor: pointer;
+}
+
+/* ============================================================
+   FOCUS VISIBLE
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================ */
+@media (max-width: 768px) {
+  :root {
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
   }
-  50% {
-    opacity: 0.5;
+}
+
+@media (max-width: 640px) {
+  .landing-page .landing-hero-title {
+    font-size: 2rem;
+  }
+  
+  .landing-page .landing-stats-card {
+    padding: 1rem;
   }
 }

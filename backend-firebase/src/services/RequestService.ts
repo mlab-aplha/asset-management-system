@@ -1,3 +1,5 @@
+// backend-firebase/src/services/RequestService.ts
+
 import {
     collection,
     query,
@@ -10,92 +12,27 @@ import {
     updateDoc,
     deleteDoc,
     Timestamp,
-    QueryConstraint
+    QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import {
+    IRequest,
+    IRequestFilters,
+    CreateRequestInput,
+    FulfillmentInput,
+    ApproveInput,
+    RejectInput,
+    RequestItem,
+    ApprovalData,
+    ApprovalEntry,
+    FulfillmentDetail,
+    NEXT_STATUS,
+    LEVEL_STATUS,
+    APPROVAL_CHAIN,
+} from '../../../src/core/types/request.types';
 
-// Define types locally to avoid circular dependency
-export interface RequestItem {
-    assetType: string;
-    category: string;
-    quantity: number;
-    itemStatus: 'pending' | 'fulfilled' | 'cancelled' | 'partial';
-    purpose?: string;
-    specifications?: Record<string, string>;
-    urgency?: 'low' | 'normal' | 'high' | 'urgent';
-    fulfillmentDetails?: Array<{
-        fulfilledBy: string;
-        fulfilledAt: Timestamp;
-        quantity: number;
-        notes?: string;
-    }>;
-}
+// ─── Service Response ─────────────────────────────────────────────────────────
 
-// Raw item type from Firestore (might have string itemStatus)
-interface RawRequestItem {
-    assetType: string;
-    category?: string;
-    quantity: number;
-    itemStatus?: string;
-    purpose?: string;
-    specifications?: Record<string, string>;
-    urgency?: 'low' | 'normal' | 'high' | 'urgent';
-    fulfillmentDetails?: Array<{
-        fulfilledBy: string;
-        fulfilledAt: Timestamp;
-        quantity: number;
-        notes?: string;
-    }>;
-}
-
-export interface ApprovalData {
-    approvers: Array<{
-        approved: boolean;
-        required: boolean;
-        role: string;
-    }>;
-    currentApproverIndex: number;
-    requestedAt: Timestamp;
-    status: 'pending' | 'approved' | 'rejected';
-    rejectedBy?: string;
-    rejectedAt?: Timestamp;
-    reason?: string;
-}
-
-export interface FulfillmentData {
-    fulfilledBy: string;
-    fulfilledAt: Timestamp;
-    notes?: string;
-    items?: Array<{
-        itemId: string;
-        fulfilledQuantity: number;
-        notes?: string;
-    }>;
-}
-
-// Main request interface (matches Firestore structure exactly)
-export interface AssetRequest {
-    id?: string;
-    requestId: string;
-    requesterId: string;
-    requesterName: string;
-    requesterEmail: string;
-    locationId: string;
-    locationName: string;
-    department: string;
-    status: 'draft' | 'pending' | 'under_review' | 'approved' | 'rejected' | 'fulfilled' | 'cancelled' | 'partially_fulfilled';
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-    items: RequestItem[];
-    notes?: string;
-    neededBy?: Timestamp | null;
-    createdAt: Timestamp;
-    updatedAt: Timestamp;
-    approval: ApprovalData;
-    expectedDuration?: number;
-    rejectionReason?: string;
-}
-
-// Define ServiceResponse type
 export interface ServiceResponse<T = unknown> {
     success: boolean;
     data?: T;
@@ -103,309 +40,233 @@ export interface ServiceResponse<T = unknown> {
     error?: string;
 }
 
-// Define specific input types
-export interface CreateRequestInput {
-    requesterId: string;
-    requesterName: string;
-    requesterEmail: string;
-    locationId: string;
-    locationName: string;
-    department: string;
-    items: Array<{
-        assetType: string;
-        category: string;
-        quantity: number;
-        itemStatus?: 'pending' | 'fulfilled' | 'cancelled';
-        purpose?: string;
-        specifications?: Record<string, string>;
-        urgency?: 'low' | 'normal' | 'high' | 'urgent';
-        fulfillmentDetails?: Array<{
-            fulfilledBy: string;
-            fulfilledAt: Timestamp;
-            quantity: number;
-            notes?: string;
-        }>;
-    }>;
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-    notes?: string;
-    neededBy?: Date | Timestamp | string;
-    expectedDuration?: number;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const COLLECTION = 'requests';
+
+function toDate(val: unknown): Date | undefined {
+    if (!val) return undefined;
+    if (val instanceof Timestamp) return val.toDate();
+    if (val instanceof Date) return val;
+    if (typeof val === 'string') {
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? undefined : d;
+    }
+    return undefined;
 }
 
-export interface FulfillmentInput {
-    notes?: string;
-    items?: Array<{
-        itemId: string;
-        fulfilledQuantity: number;
-        notes?: string;
-    }>;
+function convertTimestamps<T>(data: Record<string, unknown>): T {
+    const out: Record<string, unknown> = { ...data };
+    for (const key of Object.keys(out)) {
+        const v = out[key];
+        if (v instanceof Timestamp) {
+            out[key] = v.toDate();
+        } else if (Array.isArray(v)) {
+            out[key] = v.map((item) =>
+                item && typeof item === 'object' && !(item instanceof Date)
+                    ? convertTimestamps(item as Record<string, unknown>)
+                    : item,
+            );
+        } else if (v && typeof v === 'object' && !(v instanceof Date)) {
+            out[key] = convertTimestamps(v as Record<string, unknown>);
+        }
+    }
+    return out as T;
 }
 
-// Type for filter parameters
-export interface RequestFilters {
-    status?: string[];
-    priority?: string[];
-    locationId?: string;
-    department?: string;
-    requesterId?: string;
-    searchTerm?: string;
-    dateFrom?: Date;
-    dateTo?: Date;
+const VALID_ITEM_STATUSES = ['pending', 'fulfilled', 'cancelled', 'partial'] as const;
+
+function normaliseItem(raw: Record<string, unknown>): RequestItem {
+    const status = VALID_ITEM_STATUSES.includes(
+        raw.itemStatus as (typeof VALID_ITEM_STATUSES)[number],
+    )
+        ? (raw.itemStatus as RequestItem['itemStatus'])
+        : 'pending';
+
+    return {
+        assetType: (raw.assetType as string) || '',
+        category: (raw.category as string) || '',
+        quantity: (raw.quantity as number) || 0,
+        itemStatus: status,
+        purpose: raw.purpose as string | undefined,
+        specifications: raw.specifications as Record<string, string> | undefined,
+        urgency: raw.urgency as RequestItem['urgency'],
+        fulfillmentDetails: (raw.fulfillmentDetails as FulfillmentDetail[]) || [],
+    };
 }
+
+function normaliseApproval(raw: unknown): ApprovalData {
+    const a = (raw as Record<string, unknown>) || {};
+
+    // Build default 3-level approvers if none stored yet
+    const defaultApprovers: ApprovalEntry[] = APPROVAL_CHAIN.map((role) => ({
+        role,
+        required: true,
+        approved: false,
+    }));
+
+    return {
+        approvers: ((a.approvers as ApprovalEntry[]) || defaultApprovers),
+        currentApproverIndex: (a.currentApproverIndex as number) ?? 0,
+        requestedAt: (a.requestedAt as Timestamp | Date) || Timestamp.now(),
+        status: (a.status as 'pending' | 'approved' | 'rejected') || 'pending',
+        rejectedBy: a.rejectedBy as string | undefined,
+        rejectedByName: a.rejectedByName as string | undefined,
+        rejectedAt: a.rejectedAt as Timestamp | Date | undefined,
+        reason: a.reason as string | undefined,
+    };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapDoc(d: any): IRequest {
+    const raw = d.data() as Record<string, unknown>;
+    const converted = convertTimestamps<Record<string, unknown>>(raw);
+
+    const rawItems = (converted.items as Record<string, unknown>[]) || [];
+
+    return {
+        id: d.id,
+        requestId: (converted.requestId as string) || d.id,
+        requesterId: (converted.requesterId as string) || '',
+        requesterName: (converted.requesterName as string) || '',
+        requesterEmail: (converted.requesterEmail as string) || '',
+        locationId: (converted.locationId as string) || '',
+        locationName: (converted.locationName as string) || '',
+        department: (converted.department as string) || '',
+        status: (converted.status as IRequest['status']) || 'pending',
+        priority: (converted.priority as IRequest['priority']) || 'medium',
+        items: rawItems.map(normaliseItem),
+        notes: converted.notes as string | undefined,
+        neededBy: converted.neededBy as Date | null | undefined,
+        createdAt: (converted.createdAt as Date) || new Date(),
+        updatedAt: (converted.updatedAt as Date) || new Date(),
+        approval: normaliseApproval(converted.approval),
+        expectedDuration: converted.expectedDuration as number | undefined,
+        rejectionReason: converted.rejectionReason as string | undefined,
+        fulfilledBy: converted.fulfilledBy as string | undefined,
+        fulfilledAt: converted.fulfilledAt as Date | undefined,
+    };
+}
+
+// ─── RequestService ───────────────────────────────────────────────────────────
 
 export class RequestService {
-    private static instance: RequestService;
-    protected collectionName = 'requests';
+    private static _instance: RequestService;
 
-    protected constructor() { }
-
-    public static getInstance(): RequestService {
-        if (!RequestService.instance) {
-            RequestService.instance = new RequestService();
+    static getInstance(): RequestService {
+        if (!RequestService._instance) {
+            RequestService._instance = new RequestService();
         }
-        return RequestService.instance;
+        return RequestService._instance;
     }
 
-    // Helper to safely convert any value to Date
-    private safeGetTime(value: unknown): number | null {
-        if (!value) return null;
+    // ── Read ──────────────────────────────────────────────────────────────────
 
-        if (value instanceof Timestamp) {
-            return value.toDate().getTime();
-        } else if (value instanceof Date) {
-            return value.getTime();
-        } else if (typeof value === 'string') {
-            try {
-                return new Date(value).getTime();
-            } catch {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    // Helper to convert Firestore timestamps to Date objects
-    protected convertTimestamps<T>(data: Record<string, unknown>): T {
-        const converted: Record<string, unknown> = { ...data };
-
-        Object.keys(converted).forEach(key => {
-            const value = converted[key];
-
-            if (value instanceof Timestamp) {
-                converted[key] = value.toDate();
-            } else if (Array.isArray(value)) {
-                converted[key] = value.map(item =>
-                    item && typeof item === 'object'
-                        ? this.convertTimestamps(item as Record<string, unknown>)
-                        : item
-                );
-            } else if (value && typeof value === 'object' && !(value instanceof Date)) {
-                converted[key] = this.convertTimestamps(value as Record<string, unknown>);
-            }
-        });
-
-        return converted as T;
-    }
-
-    // Helper to ensure item has correct status type
-    private normalizeItem(item: RawRequestItem): RequestItem {
-        const validStatuses = ['pending', 'fulfilled', 'cancelled', 'partial'];
-        const itemStatus = item.itemStatus && validStatuses.includes(item.itemStatus)
-            ? item.itemStatus as 'pending' | 'fulfilled' | 'cancelled' | 'partial'
-            : 'pending';
-
-        return {
-            assetType: item.assetType || '',
-            category: item.category || '',
-            quantity: item.quantity || 0,
-            itemStatus,
-            purpose: item.purpose,
-            specifications: item.specifications,
-            urgency: item.urgency,
-            fulfillmentDetails: item.fulfillmentDetails
-        };
-    }
-
-    // Helper to normalize an array of items
-    private normalizeItems(items: RawRequestItem[]): RequestItem[] {
-        return items.map(item => this.normalizeItem(item));
-    }
-
-    // Helper to normalize approval data
-    private normalizeApproval(data: unknown): ApprovalData {
-        const approvalData = data as Record<string, unknown> || {};
-
-        return {
-            approvers: (approvalData.approvers as Array<{ approved: boolean; required: boolean; role: string; }>) ||
-                [{ role: 'admin', required: true, approved: false }],
-            currentApproverIndex: (approvalData.currentApproverIndex as number) || 0,
-            requestedAt: (approvalData.requestedAt as Timestamp) || Timestamp.now(),
-            status: (approvalData.status as 'pending' | 'approved' | 'rejected') || 'pending',
-            rejectedBy: approvalData.rejectedBy as string,
-            rejectedAt: approvalData.rejectedAt as Timestamp,
-            reason: approvalData.reason as string
-        };
-    }
-
-    // === INSTANCE METHODS FOR CHILD CLASSES ===
-    async getRequests(filters?: RequestFilters): Promise<AssetRequest[]> {
+    async getRequests(
+        filters?: IRequestFilters & { locationIds?: string[] },
+    ): Promise<IRequest[]> {
         try {
-            const requestsRef = collection(db, this.collectionName);
+            const ref = collection(db, COLLECTION);
             const constraints: QueryConstraint[] = [];
 
-            // Add filters
             if (filters?.status?.length) {
-                constraints.push(where("status", "in", filters.status));
+                constraints.push(where('status', 'in', filters.status));
             }
-
             if (filters?.priority?.length) {
-                constraints.push(where("priority", "in", filters.priority));
+                constraints.push(where('priority', 'in', filters.priority));
             }
-
             if (filters?.locationId) {
-                constraints.push(where("locationId", "==", filters.locationId));
+                constraints.push(where('locationId', '==', filters.locationId));
             }
-
+            if (filters?.locationIds?.length) {
+                constraints.push(where('locationId', 'in', filters.locationIds));
+            }
             if (filters?.department) {
-                constraints.push(where("department", "==", filters.department));
+                constraints.push(where('department', '==', filters.department));
             }
-
             if (filters?.requesterId) {
-                constraints.push(where("requesterId", "==", filters.requesterId));
+                constraints.push(where('requesterId', '==', filters.requesterId));
             }
 
-            // Always order by createdAt descending
-            constraints.push(orderBy("createdAt", "desc"));
+            constraints.push(orderBy('createdAt', 'desc'));
 
-            const q = query(requestsRef, ...constraints);
-            const snapshot = await getDocs(q);
+            const snap = await getDocs(query(ref, ...constraints));
+            let results: IRequest[] = snap.docs.map(mapDoc);
 
-            let requests = snapshot.docs.map(doc => {
-                const data = doc.data();
-                const converted = this.convertTimestamps<Omit<AssetRequest, 'id'>>(data);
-
-                // Normalize items to ensure correct typing
-                const items = converted.items as unknown;
-                if (items && Array.isArray(items)) {
-                    converted.items = this.normalizeItems(items as RawRequestItem[]);
-                }
-
-                // Normalize approval
-                if (converted.approval) {
-                    converted.approval = this.normalizeApproval(converted.approval);
-                }
-
-                return {
-                    id: doc.id,
-                    ...converted
-                } as AssetRequest;
-            });
-
-            // Apply client-side filters that can't be done in Firestore
+            // Client-side filters
             if (filters?.searchTerm) {
                 const term = filters.searchTerm.toLowerCase();
-                requests = requests.filter(req =>
-                    req.requesterName?.toLowerCase().includes(term) ||
-                    req.requestId?.toLowerCase().includes(term) ||
-                    req.department?.toLowerCase().includes(term) ||
-                    req.items?.some(item =>
-                        item.assetType.toLowerCase().includes(term) ||
-                        (item.category && item.category.toLowerCase().includes(term))
-                    )
+                results = results.filter(
+                    (r) =>
+                        r.requesterName?.toLowerCase().includes(term) ||
+                        r.requestId?.toLowerCase().includes(term) ||
+                        r.department?.toLowerCase().includes(term) ||
+                        r.items?.some((i) => i.assetType.toLowerCase().includes(term)),
                 );
             }
-
             if (filters?.dateFrom) {
-                const fromTime = filters.dateFrom.getTime();
-                requests = requests.filter(req => {
-                    const reqTime = this.safeGetTime(req.createdAt);
-                    return reqTime !== null && reqTime >= fromTime;
+                const from = filters.dateFrom.getTime();
+                results = results.filter((r) => {
+                    const t = toDate(r.createdAt)?.getTime();
+                    return t !== undefined && t >= from;
                 });
             }
-
             if (filters?.dateTo) {
-                const toTime = filters.dateTo.getTime();
-                requests = requests.filter(req => {
-                    const reqTime = this.safeGetTime(req.createdAt);
-                    return reqTime !== null && reqTime <= toTime;
+                const to = filters.dateTo.getTime();
+                results = results.filter((r) => {
+                    const t = toDate(r.createdAt)?.getTime();
+                    return t !== undefined && t <= to;
                 });
             }
 
-            return requests;
-        } catch (error) {
-            console.error('Error fetching requests:', error);
+            return results;
+        } catch (err) {
+            console.error('[RequestService.getRequests]', err);
             return [];
         }
     }
 
-    async getRequestById(id: string): Promise<AssetRequest | null> {
+    async getRequestById(id: string): Promise<IRequest | null> {
         try {
-            const docRef = doc(db, this.collectionName, id);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                const converted = this.convertTimestamps<Omit<AssetRequest, 'id'>>(data);
-
-                // Normalize items
-                const items = converted.items as unknown;
-                if (items && Array.isArray(items)) {
-                    converted.items = this.normalizeItems(items as RawRequestItem[]);
-                }
-
-                // Normalize approval
-                if (converted.approval) {
-                    converted.approval = this.normalizeApproval(converted.approval);
-                }
-
-                return {
-                    id: docSnap.id,
-                    ...converted
-                } as AssetRequest;
-            }
-            return null;
-        } catch (error) {
-            console.error('Error fetching request:', error);
+            const snap = await getDoc(doc(db, COLLECTION, id));
+            if (!snap.exists()) return null;
+            return mapDoc(snap);
+        } catch (err) {
+            console.error('[RequestService.getRequestById]', err);
             return null;
         }
     }
 
-    // === STATIC METHODS FOR DIRECT USE ===
-    static async createRequest(data: CreateRequestInput): Promise<ServiceResponse<AssetRequest>> {
+    // ── Static mutations ──────────────────────────────────────────────────────
+
+
+    static async createRequest(
+        data: CreateRequestInput,
+    ): Promise<ServiceResponse<IRequest>> {
         try {
-            const requestsRef = collection(db, 'requests');
+            const requestId = `REQ-${new Date().getFullYear()}-${String(
+                Math.floor(Math.random() * 9000) + 1000,
+            )}`;
 
-            // Generate request ID
-            const requestId = `REQ-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
-
-            // Prepare items with default values
-            const items = data.items.map(item => ({
-                assetType: item.assetType,
-                category: item.category,
-                quantity: item.quantity,
-                itemStatus: item.itemStatus || 'pending',
-                purpose: item.purpose,
-                specifications: item.specifications,
-                urgency: item.urgency,
-                fulfillmentDetails: item.fulfillmentDetails || []
+            const items = data.items.map((i) => ({
+                ...i,
+                itemStatus: 'pending' as const,
+                fulfillmentDetails: [],
             }));
 
-            // Prepare approval structure
-            const approval = {
-                approvers: [
-                    {
-                        role: 'admin',
-                        required: true,
-                        approved: false
-                    }
-                ],
+            // Full 3-level approval chain stored in Firestore from creation
+            const approval: ApprovalData = {
+                approvers: APPROVAL_CHAIN.map((role) => ({
+                    role,
+                    required: true,
+                    approved: false,
+                })),
                 currentApproverIndex: 0,
                 requestedAt: Timestamp.now(),
-                status: 'pending' as const
+                status: 'pending',
             };
 
-            // Prepare the request data
-            const requestData = {
+            const payload = {
                 requestId,
                 requesterId: data.requesterId,
                 requesterName: data.requesterName,
@@ -420,237 +281,421 @@ export class RequestService {
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now(),
                 neededBy: data.neededBy
-                    ? (data.neededBy instanceof Timestamp ? data.neededBy : Timestamp.fromDate(new Date(data.neededBy)))
+                    ? Timestamp.fromDate(new Date(data.neededBy))
                     : null,
                 expectedDuration: data.expectedDuration || 0,
-                approval
+                approval,
             };
 
-            const docRef = await addDoc(requestsRef, requestData);
-
-            // Get the instance for helper methods
-            const instance = RequestService.getInstance();
-
-            // Convert timestamps to Dates for the response
-            const converted = instance.convertTimestamps<Omit<AssetRequest, 'id'>>(requestData);
-
-            // Normalize items in the result
-            const resultItems = converted.items as unknown;
-            if (resultItems && Array.isArray(resultItems)) {
-                converted.items = instance.normalizeItems(resultItems as RawRequestItem[]);
-            }
-
-            const result = {
-                id: docRef.id,
-                ...converted
-            } as AssetRequest;
+            const ref = await addDoc(collection(db, COLLECTION), payload);
+            const svc = RequestService.getInstance();
+            const created = await svc.getRequestById(ref.id);
 
             return {
                 success: true,
-                data: result,
-                message: 'Request created successfully'
+                data: created!,
+                message: 'Request submitted successfully',
             };
-        } catch (error) {
-            console.error('Error creating request:', error);
+        } catch (err) {
+            console.error('[RequestService.createRequest]', err);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: err instanceof Error ? err.message : 'Unknown error',
             };
         }
     }
 
-    // SIMPLIFIED: Just need requestId - Firebase rules handle authorization
-    static async approveRequest(requestId: string): Promise<ServiceResponse> {
-        try {
-            const docRef = doc(db, 'requests', requestId);
 
-            // First get the current request to update approval
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) {
-                return { success: false, error: 'Request not found' };
+    static async approveRequest(input: ApproveInput): Promise<ServiceResponse> {
+        try {
+            const ref = doc(db, COLLECTION, input.requestId);
+            const snap = await getDoc(ref);
+            if (!snap.exists()) return { success: false, error: 'Request not found' };
+
+            const current = mapDoc(snap);
+            const { approval } = current;
+
+            // Find the approver entry for this level
+            const approverIndex = approval.approvers.findIndex(
+                (a) => a.role === input.level,
+            );
+
+            if (approverIndex === -1) {
+                return { success: false, error: `No approver entry found for level: ${input.level}` };
             }
 
-            const currentData = docSnap.data();
-            const currentApproval = (currentData.approval as ApprovalData) || {
-                approvers: [{ role: 'admin', required: true, approved: false }],
-                currentApproverIndex: 0,
-                requestedAt: Timestamp.now(),
-                status: 'pending'
-            };
+            // Verify it is actually this level's turn
+            const expectedStatus = LEVEL_STATUS[input.level];
+            if (current.status !== expectedStatus) {
+                return {
+                    success: false,
+                    error: `Request is not at the ${input.level} stage (current: ${current.status})`,
+                };
+            }
 
-            // Update the approver
-            const updatedApprovers = (currentApproval.approvers || []).map((approver: { role: string; required: boolean; approved: boolean }) =>
-                approver.role === 'admin' ? { ...approver, approved: true } : approver
-            );
+            // Mark this level as approved
+            const updatedApprovers: ApprovalEntry[] = approval.approvers.map((a, i) => {
+                if (i !== approverIndex) return a;
+                return {
+                    ...a,
+                    approved: true,
+                    approvedBy: input.approvedBy,
+                    approvedByName: input.approvedByName,
+                    approvedAt: Timestamp.now(),
+                    comments: input.comments,
+                };
+            });
 
-            // Check if all required approvers have approved
-            const allApproved = updatedApprovers.every((a: { role: string; required: boolean; approved: boolean }) =>
-                !a.required || a.approved
-            );
+            const nextStatus = NEXT_STATUS[input.level];
+            const nextIndex = approverIndex + 1;
 
-            await updateDoc(docRef, {
-                status: allApproved ? 'approved' : 'under_review',
+            await updateDoc(ref, {
+                status: nextStatus,
                 approval: {
-                    ...currentApproval,
+                    ...approval,
                     approvers: updatedApprovers,
-                    status: allApproved ? 'approved' : 'pending'
+                    currentApproverIndex: nextIndex,
+                    // Mark overall approval complete only when admin approves
+                    status: nextStatus === 'approved' ? 'approved' : 'pending',
                 },
-                updatedAt: Timestamp.now()
+                updatedAt: Timestamp.now(),
             });
 
             return {
                 success: true,
-                message: allApproved ? 'Request approved' : 'Request approved, pending other approvers'
+                message:
+                    nextStatus === 'approved'
+                        ? 'Request fully approved'
+                        : `Approved — forwarded to ${nextIndex < APPROVAL_CHAIN.length
+                            ? APPROVAL_CHAIN[nextIndex]
+                            : 'next stage'
+                        }`,
             };
-        } catch (error) {
-            console.error('Error approving request:', error);
+        } catch (err) {
+            console.error('[RequestService.approveRequest]', err);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: err instanceof Error ? err.message : 'Unknown error',
             };
         }
     }
 
-    // SIMPLIFIED: Just need requestId and reason - Firebase rules handle authorization
-    static async rejectRequest(requestId: string, reason: string): Promise<ServiceResponse> {
+
+    static async rejectRequest(input: RejectInput): Promise<ServiceResponse> {
         try {
-            const docRef = doc(db, 'requests', requestId);
+            const ref = doc(db, COLLECTION, input.requestId);
+            const snap = await getDoc(ref);
+            if (!snap.exists()) return { success: false, error: 'Request not found' };
 
-            await updateDoc(docRef, {
+            const current = mapDoc(snap);
+            const { approval } = current;
+
+            await updateDoc(ref, {
                 status: 'rejected',
-                rejectionReason: reason,
+                rejectionReason: input.reason,
                 approval: {
+                    ...approval,
                     status: 'rejected',
+                    rejectedBy: input.rejectedBy,
+                    rejectedByName: input.rejectedByName,
                     rejectedAt: Timestamp.now(),
-                    reason
+                    reason: input.reason,
                 },
-                updatedAt: Timestamp.now()
+                updatedAt: Timestamp.now(),
             });
 
-            return {
-                success: true,
-                message: 'Request rejected'
-            };
-        } catch (error) {
-            console.error('Error rejecting request:', error);
+            return { success: true, message: 'Request rejected' };
+        } catch (err) {
+            console.error('[RequestService.rejectRequest]', err);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: err instanceof Error ? err.message : 'Unknown error',
             };
         }
     }
+
 
     static async fulfillRequest(
         requestId: string,
-        fulfillmentData: FulfillmentInput
+        fulfillmentData: FulfillmentInput,
+        fulfilledBy: string,
     ): Promise<ServiceResponse> {
         try {
-            const docRef = doc(db, 'requests', requestId);
+            const ref = doc(db, COLLECTION, requestId);
+            const snap = await getDoc(ref);
+            if (!snap.exists()) return { success: false, error: 'Request not found' };
 
-            // Get current request to update item statuses
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) {
-                return { success: false, error: 'Request not found' };
+            const current = mapDoc(snap);
+            if (current.status !== 'approved') {
+                return {
+                    success: false,
+                    error: `Request must be approved before fulfillment (current: ${current.status})`,
+                };
             }
 
-            const currentData = docSnap.data();
-            const currentItems = (currentData.items as RequestItem[]) || [];
+            const updatedItems = current.items.map((item, index) => {
+                const fi = fulfillmentData.items?.find((x) => x.itemId === String(index));
+                if (!fi) return item;
 
-            // If specific items are being fulfilled, update their status
-            const updatedItems = currentItems.map((item: RequestItem, index: number) => {
-                const fulfillmentItem = fulfillmentData.items?.find(fi => fi.itemId === String(index));
-                if (fulfillmentItem) {
-                    const fulfillmentDetails = item.fulfillmentDetails || [];
-                    const totalFulfilled = fulfillmentDetails.reduce((sum, f) => sum + f.quantity, 0) + fulfillmentItem.fulfilledQuantity;
+                const prev = item.fulfillmentDetails || [];
+                const totalDone =
+                    prev.reduce((s, f) => s + f.quantity, 0) + fi.fulfilledQuantity;
+                const newStatus: RequestItem['itemStatus'] =
+                    totalDone >= item.quantity ? 'fulfilled' : 'partial';
 
-                    return {
-                        ...item,
-                        itemStatus: totalFulfilled >= item.quantity ? 'fulfilled' : 'partial',
-                        fulfillmentDetails: [
-                            ...fulfillmentDetails,
-                            {
-                                fulfilledBy: 'admin', // Firebase rules handle authorization
-                                fulfilledAt: Timestamp.now(),
-                                quantity: fulfillmentItem.fulfilledQuantity,
-                                notes: fulfillmentItem.notes || fulfillmentData.notes
-                            }
-                        ]
-                    } as RequestItem;
-                }
-                return item;
+                return {
+                    ...item,
+                    itemStatus: newStatus,
+                    fulfillmentDetails: [
+                        ...prev,
+                        {
+                            fulfilledBy,
+                            fulfilledAt: Timestamp.now(),
+                            quantity: fi.fulfilledQuantity,
+                            notes: fi.notes || fulfillmentData.notes,
+                        },
+                    ],
+                };
             });
 
-            // Check if all items are fulfilled
-            const allFulfilled = updatedItems.every((item: RequestItem) => {
-                const totalFulfilled = (item.fulfillmentDetails || []).reduce((sum, f) => sum + f.quantity, 0);
-                return totalFulfilled >= item.quantity;
+            const allDone = updatedItems.every((i) => {
+                const total = (i.fulfillmentDetails || []).reduce(
+                    (s, f) => s + f.quantity,
+                    0,
+                );
+                return total >= i.quantity;
             });
 
-            await updateDoc(docRef, {
-                status: allFulfilled ? 'fulfilled' : 'partially_fulfilled',
+            await updateDoc(ref, {
+                status: allDone ? 'fulfilled' : 'partially_fulfilled',
                 items: updatedItems,
-                fulfillmentData: {
-                    ...fulfillmentData,
-                    fulfilledAt: Timestamp.now()
-                },
-                updatedAt: Timestamp.now()
+                fulfilledBy,
+                fulfilledAt: Timestamp.now(),
+                updatedAt: Timestamp.now(),
             });
 
             return {
                 success: true,
-                message: allFulfilled ? 'Request fulfilled' : 'Request partially fulfilled'
+                message: allDone ? 'Request fulfilled' : 'Request partially fulfilled',
             };
-        } catch (error) {
-            console.error('Error fulfilling request:', error);
+        } catch (err) {
+            console.error('[RequestService.fulfillRequest]', err);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: err instanceof Error ? err.message : 'Unknown error',
             };
         }
     }
 
     static async deleteRequest(requestId: string): Promise<ServiceResponse> {
         try {
-            const docRef = doc(db, 'requests', requestId);
-            await deleteDoc(docRef);
-            return {
-                success: true,
-                message: 'Request deleted successfully'
-            };
-        } catch (error) {
-            console.error('Error deleting request:', error);
+            await deleteDoc(doc(db, COLLECTION, requestId));
+            return { success: true, message: 'Request deleted' };
+        } catch (err) {
+            console.error('[RequestService.deleteRequest]', err);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: err instanceof Error ? err.message : 'Unknown error',
             };
         }
     }
 
-    static async updateRequest(requestId: string, updates: Record<string, unknown>): Promise<ServiceResponse> {
+    static async updateRequest(
+        requestId: string,
+        updates: Record<string, unknown>,
+    ): Promise<ServiceResponse> {
         try {
-            const docRef = doc(db, 'requests', requestId);
+            const safe = { ...updates };
+            delete safe.id;
+            delete safe.requestId;
+            delete safe.createdAt;
 
-            // Remove fields that shouldn't be updated directly
-            const safeUpdates = { ...updates };
-            delete safeUpdates.id;
-            delete safeUpdates.requestId;
-            delete safeUpdates.createdAt;
-
-            await updateDoc(docRef, {
-                ...safeUpdates,
-                updatedAt: Timestamp.now()
+            await updateDoc(doc(db, COLLECTION, requestId), {
+                ...safe,
+                updatedAt: Timestamp.now(),
             });
 
-            return {
-                success: true,
-                message: 'Request updated successfully'
-            };
-        } catch (error) {
-            console.error('Error updating request:', error);
+            return { success: true, message: 'Request updated' };
+        } catch (err) {
+            console.error('[RequestService.updateRequest]', err);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: err instanceof Error ? err.message : 'Unknown error',
             };
         }
+    }
+}
+
+export class AdminRequestService extends RequestService {
+    private static _admin: AdminRequestService;
+
+    static getInstance(): AdminRequestService {
+        if (!AdminRequestService._admin) {
+            AdminRequestService._admin = new AdminRequestService();
+        }
+        return AdminRequestService._admin;
+    }
+
+    async getRequests(filters?: IRequestFilters): Promise<IRequest[]> {
+        return super.getRequests(filters);
+    }
+
+    async getPendingRequests(): Promise<IRequest[]> {
+        return this.getRequests({ status: ['pending', 'under_review', 'pending_admin'] });
+    }
+
+    /** Admin approves at the final 'admin' level. */
+    async approveRequest(
+        requestId: string,
+        approvedBy: string,
+        approvedByName: string,
+        comments?: string,
+    ): Promise<ServiceResponse> {
+        return RequestService.approveRequest({
+            requestId,
+            level: 'admin',
+            approvedBy,
+            approvedByName,
+            comments,
+        });
+    }
+
+    async rejectRequest(
+        requestId: string,
+        reason: string,
+        rejectedBy: string,
+        rejectedByName: string,
+    ): Promise<ServiceResponse> {
+        return RequestService.rejectRequest({ requestId, reason, rejectedBy, rejectedByName });
+    }
+
+    async fulfillRequest(
+        requestId: string,
+        data: FulfillmentInput,
+        fulfilledBy: string,
+    ): Promise<ServiceResponse> {
+        return RequestService.fulfillRequest(requestId, data, fulfilledBy);
+    }
+
+    async deleteRequest(requestId: string): Promise<ServiceResponse> {
+        return RequestService.deleteRequest(requestId);
+    }
+
+    async updateRequest(
+        requestId: string,
+        updates: Record<string, unknown>,
+    ): Promise<ServiceResponse> {
+        return RequestService.updateRequest(requestId, updates);
+    }
+}
+
+
+export class FacilitatorRequestService extends RequestService {
+    private static _fac: FacilitatorRequestService;
+
+    static getFacilitatorInstance(): FacilitatorRequestService {
+        if (!FacilitatorRequestService._fac) {
+            FacilitatorRequestService._fac = new FacilitatorRequestService();
+        }
+        return FacilitatorRequestService._fac;
+    }
+
+    async getAssignedRequests(
+        locationIds: string[],
+        filters?: IRequestFilters,
+    ): Promise<IRequest[]> {
+        if (!locationIds.length) return [];
+        return super.getRequests({ ...filters, locationIds });
+    }
+
+    async getPendingRequests(locationIds: string[]): Promise<IRequest[]> {
+        return this.getAssignedRequests(locationIds, { status: ['pending'] });
+    }
+
+    /** Approved requests that need physical fulfillment. */
+    async getRequestsToFulfill(locationIds: string[]): Promise<IRequest[]> {
+        return this.getAssignedRequests(locationIds, { status: ['approved'] });
+    }
+
+    /** Facilitator approves — moves request to 'under_review' (manager queue). */
+    async approveRequest(
+        requestId: string,
+        approvedBy: string,
+        approvedByName: string,
+        comments?: string,
+    ): Promise<ServiceResponse> {
+        return RequestService.approveRequest({
+            requestId,
+            level: 'facilitator',
+            approvedBy,
+            approvedByName,
+            comments,
+        });
+    }
+
+    /** Facilitator rejects. */
+    async rejectRequest(
+        requestId: string,
+        reason: string,
+        rejectedBy: string,
+        rejectedByName: string,
+    ): Promise<ServiceResponse> {
+        return RequestService.rejectRequest({ requestId, reason, rejectedBy, rejectedByName });
+    }
+
+    async fulfillRequest(
+        requestId: string,
+        data: FulfillmentInput,
+        fulfilledBy: string,
+    ): Promise<ServiceResponse> {
+        return RequestService.fulfillRequest(requestId, data, fulfilledBy);
+    }
+}
+
+
+export class ManagerRequestService extends RequestService {
+    private static _mgr: ManagerRequestService;
+
+    static getManagerInstance(): ManagerRequestService {
+        if (!ManagerRequestService._mgr) {
+            ManagerRequestService._mgr = new ManagerRequestService();
+        }
+        return ManagerRequestService._mgr;
+    }
+
+    async getAssignedRequests(
+        locationIds: string[],
+        filters?: IRequestFilters,
+    ): Promise<IRequest[]> {
+        if (!locationIds.length) return [];
+        return super.getRequests({ ...filters, locationIds });
+    }
+
+    async getPendingRequests(locationIds: string[]): Promise<IRequest[]> {
+        return this.getAssignedRequests(locationIds, { status: ['under_review'] });
+    }
+
+    async approveRequest(
+        requestId: string,
+        approvedBy: string,
+        approvedByName: string,
+        comments?: string,
+    ): Promise<ServiceResponse> {
+        return RequestService.approveRequest({
+            requestId,
+            level: 'manager',
+            approvedBy,
+            approvedByName,
+            comments,
+        });
+    }
+
+    async rejectRequest(
+        requestId: string,
+        reason: string,
+        rejectedBy: string,
+        rejectedByName: string,
+    ): Promise<ServiceResponse> {
+        return RequestService.rejectRequest({ requestId, reason, rejectedBy, rejectedByName });
     }
 }

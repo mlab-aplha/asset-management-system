@@ -19,11 +19,19 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@backend/*": [
+        "./backend-firebase/src/*"
+      ]
+    }
   },
   "include": [
     "src",
-    "backend-firebase/src/services/AssetService.ts",
-    "backend-firebase/src/services/AuthService.ts"
+    "backend-firebase/src"
   ]
 }

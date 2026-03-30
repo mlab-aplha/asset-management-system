@@ -1,0 +1,106 @@
+/* ============================================================
+   THEME TOKENS — Single source of truth
+   Import this at the top of every CSS file:
+   @import '../theme-tokens.css';
+   (adjust path as needed per file location)
+
+   NEVER hardcode these values in component CSS files.
+   Always use var(--token-name).
+   ============================================================ */
+
+:root {
+  /* ── Core palette ───────────────────────────────────────── */
+  --navy:         #064789;
+  --navy-mid:     #1a5a9e;
+  --navy-dark:    #0a1c2f;    /* darkest surface / body bg */
+  --navy-surface: #064789;    /* alias for --navy */
+  --teal:         #2a6aae;
+  --teal-light:   #427aa1;
+
+  /* ── Accent ─────────────────────────────────────────────── */
+  --lime:         #679436;
+  --lime-light:   #a5be00;
+  --lime-dim:     rgba(103, 148, 54, 0.15);
+
+  /* ── Semantic aliases ───────────────────────────────────── */
+  --primary-color: var(--lime);
+  --primary-light: var(--lime-light);
+  --primary-glow:  var(--lime-dim);
+
+  /* ── Gray scale (cool, ice-blue undertone) ──────────────── */
+  --gray-900: #0a1c2f;
+  --gray-800: #1a2c3f;
+  --gray-700: #2a3c4f;
+  --gray-600: #3a4c5f;
+  --gray-500: #5a6c7f;
+  --gray-400: #7a8c9f;
+  --gray-300: #9aacbf;
+  --gray-200: #bacadf;
+  --gray-100: #dae2ef;
+  --gray-50:  #ebf2fa;
+
+  /* ── Text ───────────────────────────────────────────────── */
+  --text-primary:   #ebf2fa;
+  --text-secondary: #bacadf;
+  --text-muted:     #9aacbf;
+  --text-subtle:    #5a6c7f;
+
+  /* ── Glass surfaces ─────────────────────────────────────── */
+  --glass-bg:       rgba(255, 255, 255, 0.05);
+  --glass-bg-h:     rgba(255, 255, 255, 0.08);   /* hover */
+  --glass-bg-hover: rgba(255, 255, 255, 0.08);   /* alias */
+  --glass-border:   rgba(255, 255, 255, 0.1);
+  --glass-border-h: rgba(103, 148, 54, 0.35);    /* hover / accent */
+
+  /* Strokes (aliases kept for back-compat) */
+  --stroke:        var(--glass-border);
+  --stroke-accent: var(--glass-border-h);
+  --stroke-medium: var(--glass-border);
+
+  /* ── Shadows ────────────────────────────────────────────── */
+  --shadow-light:  0 2px 12px rgba(0, 0, 0, 0.15);
+  --shadow-medium: 0 8px 28px rgba(0, 0, 0, 0.25);
+  --shadow-heavy:  0 20px 50px rgba(0, 0, 0, 0.35);
+  --shadow-accent: 0 4px 20px rgba(103, 148, 54, 0.25);
+  --btn-shadow:      0 2px 8px rgba(0, 0, 0, 0.2);
+  --btn-shadow-hover:0 4px 12px rgba(0, 0, 0, 0.3);
+
+  /* ── Status ─────────────────────────────────────────────── */
+  --success: #679436;
+  --warning: #fbbf24;
+  --danger:  #ef4444;
+  --info:    #427aa1;
+
+  /* Status semantic (common shorthands) */
+  --color-pending:   #f59e0b;
+  --color-approved:  #10b981;
+  --color-rejected:  #ef4444;
+  --color-fulfilled: var(--lime);
+  --color-cancelled: #9aacbf;
+  --color-urgent:    #dc2626;
+  --color-high:      #f59e0b;
+  --color-medium:    #3b82f6;
+  --color-low:       #6b7280;
+
+  /* ── Border radii ───────────────────────────────────────── */
+  --radius-xs:   0.125rem;
+  --radius-sm:   0.25rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.75rem;
+  --radius-xl:   1rem;
+  --radius-2xl:  1.25rem;
+  --radius-3xl:  1.5rem;
+  --radius-pill: 9999px;
+
+  /* ── Transitions ────────────────────────────────────────── */
+  --ease:      all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-slow: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --btn-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast:   var(--ease);
+  --transition-normal: var(--ease);
+  --transition-slow:   var(--ease-slow);
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-body: 'Manrope', sans-serif;
+  --font-mono: 'Courier New', monospace;
+}

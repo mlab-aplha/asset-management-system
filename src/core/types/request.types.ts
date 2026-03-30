@@ -1,11 +1,54 @@
 // src/core/types/request.types.ts
+
+
 import { Timestamp } from 'firebase/firestore';
 
-// Define types locally - don't import from service to avoid circular dependency
+// ─── Status & Priority ────────────────────────────────────────────────────────
+
+export type RequestStatus =
+    | 'draft'
+    | 'pending'              // Submitted — awaiting facilitator
+    | 'under_review'         // Facilitator approved — awaiting manager
+    | 'pending_admin'        // Manager approved — awaiting super admin
+    | 'approved'             // All levels approved
+    | 'rejected'             // Rejected at any level
+    | 'fulfilled'
+    | 'partially_fulfilled'
+    | 'cancelled';
+
+export type RequestPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export type ApprovalLevel = 'facilitator' | 'manager' | 'admin';
+
+// ─── Approval ─────────────────────────────────────────────────────────────────
+
+export interface ApprovalEntry {
+    role: ApprovalLevel;
+    required: boolean;
+    approved: boolean;
+    approvedBy?: string;
+    approvedByName?: string;
+    approvedAt?: Timestamp | Date;
+    comments?: string;
+}
+
+export interface ApprovalData {
+    approvers: ApprovalEntry[];
+    currentApproverIndex: number;
+    requestedAt: Timestamp | Date;
+    status: 'pending' | 'approved' | 'rejected';
+    rejectedBy?: string;
+    rejectedByName?: string;
+    rejectedAt?: Timestamp | Date;
+    reason?: string;
+}
+
+// ─── Items ────────────────────────────────────────────────────────────────────
+
 export interface FulfillmentDetail {
-    fulfilledBy?: string;
-    fulfilledAt?: Timestamp;
-    quantity?: number;
+    fulfilledBy: string;
+    fulfilledAt: Timestamp | Date;
+    quantity: number;
     notes?: string;
 }
 
@@ -15,147 +58,131 @@ export interface RequestItem {
     quantity: number;
     itemStatus: 'pending' | 'fulfilled' | 'cancelled' | 'partial';
     purpose?: string;
-    specifications?: Record<string, string>; // This matches your Firestore data
+    specifications?: Record<string, string>;
     urgency?: 'low' | 'normal' | 'high' | 'urgent';
     fulfillmentDetails?: FulfillmentDetail[];
 }
 
-export interface Approver {
-    approved: boolean;
-    required: boolean;
-    role: string;
-}
+// ─── Main Request Interface ───────────────────────────────────────────────────
 
-export interface ApprovalData {
-    approvers: Approver[];
-    currentApproverIndex: number;
-    requestedAt: Timestamp;
-    status: 'pending' | 'approved' | 'rejected';
-    rejectedBy?: string;
-    rejectedAt?: Timestamp;
-    reason?: string;
-}
-
-// This matches your actual Firestore document structure EXACTLY
 export interface IRequest {
-    // Core fields
     id: string;
     requestId: string;
-
-    // Requester info
     requesterId: string;
     requesterName: string;
     requesterEmail: string;
-
-    // Location
     locationId: string;
     locationName: string;
     department: string;
-
-    // Status & Priority
-    status: 'draft' | 'pending' | 'under_review' | 'approved' | 'rejected' | 'fulfilled' | 'cancelled' | 'partially_fulfilled';
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-
-    // Items
+    status: RequestStatus;
+    priority: RequestPriority;
     items: RequestItem[];
-
-    // Dates
-    createdAt: Timestamp;
-    updatedAt: Timestamp;
-    neededBy?: Timestamp;
-
-    // Additional Fields
     notes?: string;
-    expectedDuration?: number;
-
-    // Approval Workflow
+    neededBy?: Timestamp | Date | null;
+    createdAt: Timestamp | Date;
+    updatedAt: Timestamp | Date;
     approval: ApprovalData;
-
-    // Optional fields that might exist
+    expectedDuration?: number;
     rejectionReason?: string;
-
-    // Computed fields (not in Firestore)
-    formattedCreatedAt?: string;
-    itemCount?: number;
-    totalQuantity?: number;
+    fulfilledBy?: string;
+    fulfilledAt?: Timestamp | Date;
 }
+
+// ─── Filters ──────────────────────────────────────────────────────────────────
 
 export interface IRequestFilters {
     status?: string[];
     priority?: string[];
+    locationId?: string;
+    locationIds?: string[];
+    department?: string;
+    requesterId?: string;
+    searchTerm?: string;
     dateFrom?: Date;
     dateTo?: Date;
-    locationId?: string;
-    department?: string;
-    searchTerm?: string;
-    requesterId?: string;
 }
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
 
 export interface IRequestStats {
     total: number;
     pending: number;
+    underReview: number;
+    pendingAdmin: number;
     approved: number;
     rejected: number;
     fulfilled: number;
+    partiallyFulfilled: number;
     urgent: number;
 }
 
-export interface FirestoreDocument {
-    id: string;
-    [key: string]: unknown;
+// ─── Input types ──────────────────────────────────────────────────────────────
+
+export interface CreateRequestInput {
+    requesterId: string;
+    requesterName: string;
+    requesterEmail: string;
+    locationId: string;
+    locationName: string;
+    department: string;
+    items: Omit<RequestItem, 'itemStatus' | 'fulfillmentDetails'>[];
+    priority: RequestPriority;
+    notes?: string;
+    neededBy?: Date | string;
+    expectedDuration?: number;
 }
 
-export abstract class BaseRequestService {
-    protected collectionName = 'requests';
-
-    abstract getRequests(filters?: IRequestFilters): Promise<IRequest[]>;
-    abstract getRequestById(id: string): Promise<IRequest | null>;
-    abstract getStats(): Promise<IRequestStats>;
-
-    protected formatRequest(doc: FirestoreDocument): IRequest {
-        const data = doc as unknown as Record<string, unknown>;
-
-        // Format date
-        let formattedDate = 'N/A';
-        const createdAt = data.createdAt;
-        if (createdAt instanceof Timestamp) {
-            formattedDate = createdAt.toDate().toLocaleDateString();
-        } else if (createdAt instanceof Date) {
-            formattedDate = createdAt.toLocaleDateString();
-        }
-
-        // Calculate totals
-        const items = (data.items as RequestItem[]) || [];
-        const itemCount = items.length;
-        const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
-
-        return {
-            id: doc.id,
-            requestId: (data.requestId as string) || '',
-            requesterId: (data.requesterId as string) || '',
-            requesterName: (data.requesterName as string) || '',
-            requesterEmail: (data.requesterEmail as string) || '',
-            department: (data.department as string) || '',
-            locationId: (data.locationId as string) || '',
-            locationName: (data.locationName as string) || '',
-            status: (data.status as IRequest['status']) || 'pending',
-            priority: (data.priority as IRequest['priority']) || 'medium',
-            items: items,
-            notes: data.notes as string,
-            neededBy: data.neededBy as Timestamp,
-            createdAt: data.createdAt as Timestamp,
-            updatedAt: data.updatedAt as Timestamp,
-            approval: (data.approval as ApprovalData) || {
-                approvers: [{ role: 'admin', required: true, approved: false }],
-                currentApproverIndex: 0,
-                requestedAt: Timestamp.now(),
-                status: 'pending'
-            },
-            expectedDuration: data.expectedDuration as number,
-            rejectionReason: data.rejectionReason as string,
-            formattedCreatedAt: formattedDate,
-            itemCount: itemCount,
-            totalQuantity: totalQuantity
-        };
-    }
+export interface ApproveInput {
+    requestId: string;
+    level: ApprovalLevel;
+    approvedBy: string;
+    approvedByName: string;
+    comments?: string;
 }
+
+export interface RejectInput {
+    requestId: string;
+    reason: string;
+    rejectedBy: string;
+    rejectedByName: string;
+}
+
+export interface FulfillmentInput {
+    notes?: string;
+    items?: Array<{
+        itemId: string;
+        fulfilledQuantity: number;
+        notes?: string;
+    }>;
+}
+
+// ─── Approval flow constants ──────────────────────────────────────────────────
+
+/**
+ * After a level approves, the request moves to this status.
+ * Admin approval → 'approved' (final).
+ */
+export const NEXT_STATUS: Record<ApprovalLevel, RequestStatus> = {
+    facilitator: 'under_review',
+    manager: 'pending_admin',
+    admin: 'approved',
+};
+
+/**
+ * The request status that means it is currently at this level's queue.
+ */
+export const LEVEL_STATUS: Record<ApprovalLevel, RequestStatus> = {
+    facilitator: 'pending',
+    manager: 'under_review',
+    admin: 'pending_admin',
+};
+
+/** Human-readable label for each level. */
+export const LEVEL_LABELS: Record<ApprovalLevel, string> = {
+    facilitator: 'Asset Facilitator',
+    manager: 'Hub Manager',
+    admin: 'Super Admin',
+};
+
+/** Ordered chain. */
+export const APPROVAL_CHAIN: ApprovalLevel[] = ['facilitator', 'manager', 'admin'];

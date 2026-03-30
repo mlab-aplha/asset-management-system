@@ -1,28 +1,12 @@
-/* Asset Registry Page Styles */
-:root {
-    --navy: #00182d;
-    --teal: #073f4e;
-    --lime: #94c73d;
-    --lime-light: #a5e04a;
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-bg-hover: rgba(255, 255, 255, 0.08);
-    --shadow-light: 0 4px 20px rgba(0, 0, 0, 0.1);
-    --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.15);
-    --shadow-heavy: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    --btn-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    --btn-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.3);
-    --btn-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
+/* Asset Registry Page Styles - Using New Theme Variables */
 .registry-page {
     display: flex;
     flex-direction: column;
     padding: 2rem;
     gap: 2rem;
-    color: #ffffff;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, #0b1a24 0%, #0f1f2b 100%);
+    color: var(--text-primary);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
     min-height: 100vh;
 }
 
@@ -43,11 +27,11 @@
 .page-title {
     font-size: 2.5rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--text-primary);
     letter-spacing: -0.02em;
     margin-bottom: 0.5rem;
     line-height: 1.2;
-    background: linear-gradient(135deg, #ffffff 0%, var(--lime) 100%);
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--lime) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -55,7 +39,7 @@
 
 .page-description {
     font-size: 0.95rem;
-    color: #a0b3c9;
+    color: var(--text-secondary);
     font-weight: 400;
     max-width: 600px;
 }
@@ -83,14 +67,14 @@
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #a0b3c9;
+    color: var(--text-secondary);
     margin-bottom: 0.25rem;
 }
 
 .stat-value {
     font-size: 1.75rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--text-primary);
     line-height: 1;
 }
 
@@ -130,7 +114,7 @@
     border: 1px solid var(--glass-border);
     border-radius: 0.75rem;
     padding: 0.875rem 1.25rem;
-    color: #ffffff;
+    color: var(--text-primary);
     font-size: 0.95rem;
     transition: var(--btn-transition);
     box-sizing: border-box;
@@ -140,11 +124,11 @@
     outline: none;
     border-color: var(--lime);
     background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 0 0 3px rgba(148, 199, 61, 0.1);
+    box-shadow: 0 0 0 3px var(--lime-dim);
 }
 
 .search-input::placeholder {
-    color: #5a6f88;
+    color: var(--text-muted);
     opacity: 1;
 }
 
@@ -189,7 +173,7 @@
 .filter-button {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    color: #a0b3c9;
+    color: var(--text-secondary);
     padding: 0.5rem 1.25rem;
     font-size: 0.875rem;
     backdrop-filter: blur(4px);
@@ -204,7 +188,7 @@
     width: 0;
     height: 0;
     border-radius: 50%;
-    background: rgba(148, 199, 61, 0.3);
+    background: var(--lime-dim);
     transform: translate(-50%, -50%);
     transition: width 0.6s, height 0.6s;
     z-index: 0;
@@ -218,7 +202,7 @@
 .filter-button:hover {
     background: var(--glass-bg-hover);
     border-color: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
+    color: var(--text-primary);
     transform: translateY(-2px);
     box-shadow: var(--btn-shadow-hover);
 }
@@ -226,29 +210,29 @@
 .filter-button.active {
     background: var(--lime);
     border-color: var(--lime);
-    color: #0b1a24;
+    color: var(--navy);
     font-weight: 600;
-    box-shadow: 0 4px 12px rgba(148, 199, 61, 0.3);
+    box-shadow: 0 4px 12px var(--lime-dim);
 }
 
 .filter-button.active:hover {
     background: var(--lime-light);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(148, 199, 61, 0.4);
+    box-shadow: 0 6px 16px var(--lime-dim);
 }
 
 /* Filter Select */
 .filter-select {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    color: #ffffff;
+    color: var(--text-primary);
     padding: 0.5rem 2.5rem 0.5rem 1rem;
     font-size: 0.875rem;
     backdrop-filter: blur(4px);
     box-shadow: var(--btn-shadow);
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ebf2fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
     background-size: 14px;
@@ -265,12 +249,12 @@
 .filter-select:focus {
     outline: none;
     border-color: var(--lime);
-    box-shadow: 0 0 0 3px rgba(148, 199, 61, 0.2);
+    box-shadow: 0 0 0 3px var(--lime-dim);
 }
 
 .filter-select option {
-    background: #0f1f2b;
-    color: #ffffff;
+    background: var(--navy-mid);
+    color: var(--text-primary);
 }
 
 /* Clear Filters Button */
@@ -291,7 +275,7 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(148, 199, 61, 0.2), transparent);
+    background: linear-gradient(90deg, transparent, var(--lime-dim), transparent);
     transition: left 0.5s ease;
 }
 
@@ -300,16 +284,16 @@
 }
 
 .clear-filters:hover {
-    background: rgba(148, 199, 61, 0.1);
+    background: var(--lime-dim);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(148, 199, 61, 0.2);
+    box-shadow: 0 4px 12px var(--lime-dim);
 }
 
 /* Action Buttons */
 .action-button {
     background: transparent;
     border: 1px solid var(--glass-border);
-    color: #a0b3c9;
+    color: var(--text-secondary);
     padding: 0.4rem 1rem;
     font-size: 0.8rem;
     font-weight: 600;
@@ -342,8 +326,8 @@
 }
 
 .action-button.view:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
+    border-color: var(--teal-light);
+    color: var(--teal-light);
 }
 
 .action-button.edit:hover {
@@ -364,12 +348,12 @@
 .add-button {
     background: var(--lime);
     border: none;
-    color: #0b1a24;
+    color: var(--navy);
     padding: 0.75rem 1.5rem;
     font-size: 0.875rem;
     font-weight: 600;
     border-radius: 0.75rem;
-    box-shadow: 0 4px 12px rgba(148, 199, 61, 0.3);
+    box-shadow: 0 4px 12px var(--lime-dim);
     min-width: 120px;
     justify-content: center;
     display: inline-flex;
@@ -399,12 +383,12 @@
 .add-button:hover {
     background: var(--lime-light);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(148, 199, 61, 0.4);
+    box-shadow: 0 6px 16px var(--lime-dim);
 }
 
 .add-button:active {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(148, 199, 61, 0.3);
+    box-shadow: 0 2px 8px var(--lime-dim);
 }
 
 /* Action Group */
@@ -450,7 +434,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #a0b3c9;
+    color: var(--text-secondary);
     white-space: nowrap;
 }
 
@@ -472,14 +456,14 @@
 }
 
 .asset-table tbody tr:hover {
-    background: rgba(148, 199, 61, 0.05);
+    background: var(--lime-dim);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .asset-table td {
     padding: 1rem 1.25rem;
-    color: #e0e7ff;
+    color: var(--text-primary);
     vertical-align: middle;
 }
 
@@ -505,19 +489,19 @@
 .asset-name {
     font-size: 1rem;
     font-weight: 500;
-    color: #ffffff;
+    color: var(--text-primary);
     margin-bottom: 0.25rem;
 }
 
 .asset-description {
     font-size: 0.85rem;
-    color: #a0b3c9;
+    color: var(--text-secondary);
     margin-bottom: 0.125rem;
 }
 
 .asset-serial {
     font-size: 0.8rem;
-    color: #5a6f88;
+    color: var(--text-muted);
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
 }
 
@@ -530,7 +514,7 @@
     border: 1px solid var(--glass-border);
     border-radius: 1rem;
     font-size: 0.85rem;
-    color: #a0b3c9;
+    color: var(--text-secondary);
     min-width: 80px;
     text-align: center;
     white-space: nowrap;
@@ -553,7 +537,7 @@
 
 .location-name {
     font-size: 0.9rem;
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .status-badge {
@@ -631,7 +615,7 @@
 
 .date-cell {
     font-size: 0.9rem;
-    color: #a0b3c9;
+    color: var(--text-secondary);
     white-space: nowrap;
 }
 
@@ -650,7 +634,7 @@
 }
 
 .results-info {
-    color: #a0b3c9;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     line-height: 1.5;
 }
@@ -670,7 +654,7 @@
 .pagination-button {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    color: #ffffff;
+    color: var(--text-primary);
     padding: 0.5rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 500;
@@ -709,7 +693,7 @@
 }
 
 .pagination-info {
-    color: #a0b3c9;
+    color: var(--text-secondary);
     font-size: 0.875rem;
 }
 
@@ -738,7 +722,7 @@
 
 .state-message {
     font-size: 1rem;
-    color: #a0b3c9;
+    color: var(--text-secondary);
     margin-bottom: 1.5rem;
     max-width: 400px;
 }
@@ -748,7 +732,7 @@
     min-width: 180px;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    color: #ffffff;
+    color: var(--text-primary);
     padding: 0.75rem 2rem;
     font-size: 0.875rem;
     font-weight: 600;
@@ -773,7 +757,7 @@
 .spinner {
     width: 3rem;
     height: 3rem;
-    border: 3px solid rgba(148, 199, 61, 0.1);
+    border: 3px solid var(--lime-dim);
     border-top-color: var(--lime);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
@@ -793,7 +777,7 @@
     padding: 1rem 0;
     border-top: 1px solid var(--glass-border);
     font-size: 0.85rem;
-    color: #5a6f88;
+    color: var(--text-muted);
 }
 
 .footer-left {
@@ -804,7 +788,7 @@
 
 .system-status {
     font-weight: 500;
-    color: #a0b3c9;
+    color: var(--text-secondary);
 }
 
 .status-dot {
@@ -828,7 +812,7 @@
 }
 
 .footer-right {
-    color: #5a6f88;
+    color: var(--text-muted);
 }
 
 /* Accessibility */
@@ -848,7 +832,7 @@ input:focus-visible,
 select:focus-visible {
     outline: 2px solid var(--lime);
     outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(148, 199, 61, 0.2);
+    box-shadow: 0 0 0 4px var(--lime-dim);
 }
 
 /* Scrollbar Styling */
@@ -868,7 +852,7 @@ select:focus-visible {
 }
 
 .table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 199, 61, 0.3);
+    background: var(--lime-dim);
 }
 
 /* Responsive Design */
@@ -1004,4 +988,27 @@ select:focus-visible {
     .footer-right {
         font-size: 0.75rem;
     }
+}
+
+/* CSS Variables (should be in App.css, kept here for reference) */
+:root {
+    --navy: #064789;
+    --navy-mid: #1a5a9e;
+    --teal: #2a6aae;
+    --teal-light: #427aa1;
+    --lime: #679436;
+    --lime-light: #a5be00;
+    --lime-dim: rgba(103, 148, 54, 0.15);
+    --text-primary: #ebf2fa;
+    --text-secondary: #bacadf;
+    --text-muted: #9aacbf;
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-bg-hover: rgba(255, 255, 255, 0.08);
+    --shadow-light: 0 4px 20px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.15);
+    --shadow-heavy: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --btn-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --btn-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --btn-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

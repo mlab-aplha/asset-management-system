@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import './ui.css'; // We'll add modal styles to ui.css
+import './ui.css';
 
 interface ModalProps {
     isOpen: boolean;
@@ -16,39 +16,37 @@ export const Modal: React.FC<ModalProps> = ({
     children,
     size = 'md'
 }) => {
-    // Handle escape key
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
+            if (e.key === 'Escape') onClose();
         };
 
         if (isOpen) {
             document.addEventListener('keydown', handleEscape);
-            document.body.style.overflow = 'hidden'; // Prevent background scroll
+
+            document.body.classList.add('modal-open');
         }
 
         return () => {
             document.removeEventListener('keydown', handleEscape);
-            document.body.style.overflow = 'auto';
+            document.body.classList.remove('modal-open');
         };
     }, [isOpen, onClose]);
 
     if (!isOpen) return null;
 
-    const sizeClasses = {
-        sm: 'modal-sm',
-        md: 'modal-md',
-        lg: 'modal-lg'
-    };
+    const sizeClass = { sm: 'modal-sm', md: 'modal-md', lg: 'modal-lg' }[size];
 
     return (
+
         <div className="modal-overlay" onClick={onClose}>
-            <div className={`modal-container ${sizeClasses[size]}`} onClick={(e) => e.stopPropagation()}>
+            <div
+                className={`modal-container ${sizeClass}`}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="modal-header">
                     <h3 className="modal-title">{title}</h3>
-                    <button className="modal-close-btn" onClick={onClose}>
+                    <button className="modal-close-btn" onClick={onClose} type="button" aria-label="Close modal">
                         <span className="material-icons">close</span>
                     </button>
                 </div>

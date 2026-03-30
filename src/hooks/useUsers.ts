@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
-import { User, UserFormData, UserFilters } from '../core/entities/User';
-import { userService } from '../../backend-firebase/src/services/UserService';
-import { AuthService } from '../../backend-firebase/src/services/AuthService';
+import { User, UserFormData, UserFilters } from '@/core/entities/User';
+import { userService } from '@backend/services/UserService';
 
 interface ServiceResponse<T = unknown> {
     success: boolean;
@@ -41,25 +40,9 @@ export const useUsers = () => {
                 return { success: false, errors: validation.errors };
             }
 
-            // IMPORTANT: Get current admin user BEFORE creating new user
-            const adminUser = AuthService.getCurrentUser();
-            const adminEmail = adminUser?.email;
-
-            if (!adminEmail) {
-                return {
-                    success: false,
-                    errors: { general: 'Admin session lost. Please log in again.' }
-                };
-            }
-
-            // Store admin password (you'll need to get this from the user)
-            // We'll handle this in the next step
-
-            // Create the new user
             const newUser = await userService.createUser(userData);
 
-            // Refresh the users list
-            await loadUsers();
+
 
             return { success: true, data: newUser };
         } catch (err) {
@@ -69,18 +52,12 @@ export const useUsers = () => {
         } finally {
             setLoading(false);
         }
-    }, [loadUsers]);
+    }, []);
 
     const updateUser = useCallback(async (id: string, updates: Partial<UserFormData>): Promise<ServiceResponse<User>> => {
         try {
             setLoading(true);
             setError(null);
-
-            const validation = userService.validateUser(updates as UserFormData);
-            if (!validation.isValid) {
-                return { success: false, errors: validation.errors };
-            }
-
             const updatedUser = await userService.updateUser(id, updates);
             await loadUsers();
             return { success: true, data: updatedUser };
@@ -97,7 +74,6 @@ export const useUsers = () => {
         try {
             setLoading(true);
             setError(null);
-
             await userService.deleteUser(id);
             await loadUsers();
             return { success: true };
@@ -114,7 +90,6 @@ export const useUsers = () => {
         try {
             setLoading(true);
             setError(null);
-
             const updatedUser = await userService.toggleUserStatus(id);
             await loadUsers();
             return { success: true, data: updatedUser };

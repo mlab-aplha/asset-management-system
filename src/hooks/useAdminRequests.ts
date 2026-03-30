@@ -1,14 +1,14 @@
 // src/hooks/useAdminRequests.ts
+// Admin approves at the final 'admin' level.
 import { useState, useEffect, useCallback } from 'react';
-import { AdminRequestService } from '../../backend-firebase/src/services/AdminRequestService';
-import { IRequest, IRequestFilters, IRequestStats } from '../core/types/request.types';
+import { AdminRequestService } from '../../backend-firebase/src/services/RequestService';
+import {
+    IRequest,
+    IRequestFilters,
+    IRequestStats,
+    FulfillmentInput,
+} from '../core/types/request.types';
 import { useAuth } from './useAuth';
-
-// Define type for fulfillment data
-interface FulfillmentData {
-    notes?: string;
-    items?: Array<{ itemId: string; fulfilledQuantity: number; notes?: string }>;
-}
 
 export const useAdminRequests = () => {
     const [requests, setRequests] = useState<IRequest[]>([]);
@@ -19,121 +19,127 @@ export const useAdminRequests = () => {
     const [activeFilters, setActiveFilters] = useState<IRequestFilters>({});
 
     const { user } = useAuth();
-    const adminService = AdminRequestService.getInstance();
+    const svc = AdminRequestService.getInstance();
 
-    // Define fetch function separately from useEffect to avoid circular dependency
-    const fetchRequests = useCallback(async (filtersToUse: IRequestFilters) => {
-        setLoading(true);
-        try {
-            const data = await adminService.getRequests(filtersToUse);
-            setRequests(data);
-            setFilteredRequests(data);
+    const computeStats = (data: IRequest[]): IRequestStats => ({
+        total: data.length,
+        pending: data.filter((r) => r.status === 'pending').length,
+        underReview: data.filter((r) => r.status === 'under_review').length,
+        pendingAdmin: data.filter((r) => r.status === 'pending_admin').length,
+        approved: data.filter((r) => r.status === 'approved').length,
+        rejected: data.filter((r) => r.status === 'rejected').length,
+        fulfilled: data.filter((r) => r.status === 'fulfilled').length,
+        partiallyFulfilled: data.filter((r) => r.status === 'partially_fulfilled').length,
+        urgent: data.filter((r) => r.priority === 'urgent').length,
+    });
 
-            // Calculate stats from data
-            const statsData: IRequestStats = {
-                total: data.length,
-                pending: data.filter(r => r.status === 'pending').length,
-                approved: data.filter(r => r.status === 'approved').length,
-                rejected: data.filter(r => r.status === 'rejected').length,
-                fulfilled: data.filter(r => r.status === 'fulfilled').length,
-                urgent: data.filter(r => r.priority === 'urgent').length
-            };
-            setStats(statsData);
-            setError(null);
-        } catch (err) {
-            setError('Failed to fetch requests');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    }, [adminService]);
+    const fetchRequests = useCallback(
+        async (filters: IRequestFilters) => {
+            setLoading(true);
+            try {
+                const data = await svc.getRequests(filters);
+                setRequests(data);
+                setFilteredRequests(data);
+                setStats(computeStats(data));
+                setError(null);
+            } catch (err) {
+                setError('Failed to fetch requests');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [svc],
+    );
 
-    // Fetch when activeFilters changes
     useEffect(() => {
         fetchRequests(activeFilters);
     }, [activeFilters, fetchRequests]);
 
-    // Apply filters
-    const applyFilters = useCallback((filters: IRequestFilters) => {
-        setActiveFilters(filters);
-    }, []);
+    const applyFilters = useCallback(
+        (filters: IRequestFilters) => setActiveFilters(filters),
+        [],
+    );
 
-    // Clear filters
-    const clearFilters = useCallback(() => {
-        setActiveFilters({});
-        setFilteredRequests(requests);
-    }, [requests]);
+    const clearFilters = useCallback(() => setActiveFilters({}), []);
 
-    // Approve request - simplified to only need requestId
-    const approveRequest = useCallback(async (requestId: string) => {
-        if (!user?.uid) return false;
-
-        try {
-            const result = await adminService.approveRequest(requestId);
-
-            if (result.success) {
-                // Refresh with current filters
-                await fetchRequests(activeFilters);
-                return true;
+    /** Admin approves — moves to 'approved' (final stage). */
+    const approveRequest = useCallback(
+        async (requestId: string, comments?: string) => {
+            if (!user?.uid) return false;
+            try {
+                const res = await svc.approveRequest(
+                    requestId,
+                    user.uid,
+                    user.displayName || user.email || '',
+                    comments,
+                );
+                if (res.success) {
+                    await fetchRequests(activeFilters);
+                    return true;
+                }
+                return false;
+            } catch {
+                return false;
             }
-            return false;
-        } catch (err) {
-            console.error('Error approving request:', err);
-            return false;
-        }
-    }, [user, adminService, fetchRequests, activeFilters]);
+        },
+        [user, svc, fetchRequests, activeFilters],
+    );
 
-    // Reject request - simplified to only need requestId and reason
-    const rejectRequest = useCallback(async (requestId: string, reason: string) => {
-        if (!user?.uid) return false;
-
-        try {
-            const result = await adminService.rejectRequest(requestId, reason);
-
-            if (result.success) {
-                await fetchRequests(activeFilters);
-                return true;
+    const rejectRequest = useCallback(
+        async (requestId: string, reason: string) => {
+            if (!user?.uid) return false;
+            try {
+                const res = await svc.rejectRequest(
+                    requestId,
+                    reason,
+                    user.uid,
+                    user.displayName || user.email || '',
+                );
+                if (res.success) {
+                    await fetchRequests(activeFilters);
+                    return true;
+                }
+                return false;
+            } catch {
+                return false;
             }
-            return false;
-        } catch (err) {
-            console.error('Error rejecting request:', err);
-            return false;
-        }
-    }, [user, adminService, fetchRequests, activeFilters]);
+        },
+        [user, svc, fetchRequests, activeFilters],
+    );
 
-    // Fulfill request - simplified to only need requestId and fulfillmentData
-    const fulfillRequest = useCallback(async (requestId: string, fulfillmentData: FulfillmentData) => {
-        if (!user?.uid) return false;
-
-        try {
-            const result = await adminService.fulfillRequest(requestId, fulfillmentData);
-
-            if (result.success) {
-                await fetchRequests(activeFilters);
-                return true;
+    const fulfillRequest = useCallback(
+        async (requestId: string, fulfillmentData: FulfillmentInput) => {
+            if (!user?.uid) return false;
+            try {
+                const res = await svc.fulfillRequest(requestId, fulfillmentData, user.uid);
+                if (res.success) {
+                    await fetchRequests(activeFilters);
+                    return true;
+                }
+                return false;
+            } catch {
+                return false;
             }
-            return false;
-        } catch (err) {
-            console.error('Error fulfilling request:', err);
-            return false;
-        }
-    }, [user, adminService, fetchRequests, activeFilters]);
+        },
+        [user, svc, fetchRequests, activeFilters],
+    );
 
-    // Delete request
-    const deleteRequest = useCallback(async (requestId: string) => {
-        try {
-            const result = await adminService.deleteRequest(requestId);
-
-            if (result.success) {
-                await fetchRequests(activeFilters);
-                return true;
+    const deleteRequest = useCallback(
+        async (requestId: string) => {
+            try {
+                const res = await svc.deleteRequest(requestId);
+                if (res.success) {
+                    await fetchRequests(activeFilters);
+                    return true;
+                }
+                return false;
+            } catch {
+                return false;
             }
-            return false;
-        } catch (err) {
-            console.error('Error deleting request:', err);
-            return false;
-        }
-    }, [adminService, fetchRequests, activeFilters]);
+        },
+        [svc, fetchRequests, activeFilters],
+    );
 
     return {
         requests,
@@ -148,6 +154,6 @@ export const useAdminRequests = () => {
         rejectRequest,
         fulfillRequest,
         deleteRequest,
-        refresh: () => fetchRequests(activeFilters)
+        refresh: () => fetchRequests(activeFilters),
     };
 };

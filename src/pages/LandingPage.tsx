@@ -100,7 +100,7 @@ export const LandingPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [autoRotateHub, hubs.length]);
 
-    // Update selectedHub based on autoRotateIndex - FIXED: using functional update with condition
+    // Update selectedHub based on autoRotateIndex
     useEffect(() => {
         setSelectedHub(prevSelected => {
             // Only update if auto-rotate is enabled and we should update
@@ -140,13 +140,24 @@ export const LandingPage: React.FC = () => {
         setSearchTerm('');
     }, []);
 
+    // Updated to use CSS custom properties
     const getStatusColor = useCallback((status: string) => {
         switch (status) {
-            case 'active': return '#94c73d';
-            case 'maintenance': return '#f59e0b';
-            case 'retired': return '#ef4444';
-            default: return '#6b7280';
+            case 'active': return 'var(--success)';
+            case 'maintenance': return 'var(--warning)';
+            case 'retired': return 'var(--danger)';
+            default: return 'var(--gray-500)';
         }
+    }, []);
+
+    // Helper to get fill color for SVG markers
+    const getMarkerFill = useCallback((isSelected: boolean) => {
+        return isSelected ? 'var(--lime)' : 'var(--gray-500)';
+    }, []);
+
+    // Helper to get stroke color for pulse animation
+    const getPulseStroke = useCallback(() => {
+        return 'var(--lime)';
     }, []);
 
     return (
@@ -182,6 +193,7 @@ export const LandingPage: React.FC = () => {
                             />
                         </div>
                     )}
+
                     <button className="landing-login-button" onClick={() => navigate('/login')}>
                         Login
                     </button>
@@ -226,7 +238,7 @@ export const LandingPage: React.FC = () => {
                                                 className="landing-hub-marker"
                                                 cx={positions[index].x}
                                                 cy={positions[index].y}
-                                                fill={isSelected ? '#94c73d' : '#6b7280'}
+                                                fill={getMarkerFill(isSelected)}
                                                 r={isSelected ? '8' : '6'}
                                             />
                                             {isAutoRotating && (
@@ -236,7 +248,7 @@ export const LandingPage: React.FC = () => {
                                                     cy={positions[index].y}
                                                     r="12"
                                                     fill="none"
-                                                    stroke="#94c73d"
+                                                    stroke={getPulseStroke()}
                                                     strokeWidth="2"
                                                 />
                                             )}
@@ -247,7 +259,7 @@ export const LandingPage: React.FC = () => {
                                                 style={{
                                                     fontSize: isSelected ? '12px' : '10px',
                                                     fontWeight: 'bold',
-                                                    fill: isSelected ? '#94c73d' : 'white'
+                                                    fill: isSelected ? 'var(--lime)' : 'white'
                                                 }}
                                             >
                                                 {hub.location.toUpperCase()}
@@ -323,8 +335,8 @@ export const LandingPage: React.FC = () => {
                                                 style={{
                                                     height: `${hub.health}%`,
                                                     backgroundColor: selectedHub === hub.location
-                                                        ? '#94c73d'
-                                                        : `rgba(148, 199, 61, ${0.2 + index * 0.1})`
+                                                        ? 'var(--lime)'
+                                                        : `rgba(103, 148, 54, ${0.2 + index * 0.1})`
                                                 }}
                                                 onClick={() => handleHubClick(hub)}
                                             ></div>
@@ -442,7 +454,7 @@ export const LandingPage: React.FC = () => {
                                         <span className="asset-id">{asset.id}</span>
                                         <span
                                             className="asset-status"
-                                            style={{ backgroundColor: getStatusColor(asset.status) }}
+                                            style={{ backgroundColor: getStatusColor(asset.status), color: 'var(--navy)' }}
                                         >
                                             {asset.status}
                                         </span>
@@ -505,7 +517,7 @@ export const LandingPage: React.FC = () => {
                             <h2>{selectedAsset.name}</h2>
                             <span
                                 className="asset-status-badge"
-                                style={{ backgroundColor: getStatusColor(selectedAsset.status) }}
+                                style={{ backgroundColor: getStatusColor(selectedAsset.status), color: 'var(--navy)' }}
                             >
                                 {selectedAsset.status}
                             </span>
@@ -536,10 +548,7 @@ export const LandingPage: React.FC = () => {
                                             className="health-fill"
                                             style={{
                                                 width: `${selectedAsset.health}%`,
-                                                backgroundColor: getStatusColor(
-                                                    selectedAsset.health > 80 ? 'active' :
-                                                        selectedAsset.health > 50 ? 'maintenance' : 'retired'
-                                                )
+                                                background: `linear-gradient(90deg, var(--lime) 0%, var(--lime-light) 100%)`
                                             }}
                                         ></div>
                                         <span className="health-value">{selectedAsset.health}%</span>

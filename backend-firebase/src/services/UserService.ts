@@ -1,20 +1,44 @@
+// backend-firebase/src/services/UserService.ts
+
 import {
-    collection,
-    query,
-    orderBy,
-    getDocs,
-    getDoc,
-    doc,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    where,
-    serverTimestamp
+    collection, query, orderBy, getDocs, getDoc, doc,
+    addDoc, updateDoc, deleteDoc, where, serverTimestamp, Timestamp
 } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { db } from '../firebase/config';
-import { User, UserFormData, UserFilters, UserStats } from '../../../src/core/entities/User';
+import { auth } from '../firebase/config';
+import {
+    User, UserFormData, UserFilters, UserStats, UserRole,
+} from '../../../src/core/entities/User';
 import { UserValidation } from '../../../src/utils/Validation_userManagement';
-import { AuthService } from './AuthService';
+
+const ALL_ROLES: UserRole[] = ['super_admin', 'hub_manager', 'it', 'asset_facilitator', 'student'];
+
+async function createAuthUser(
+    email: string,
+    password: string,
+    displayName?: string,
+): Promise<{ uid: string }> {
+    console.log('🔵 Creating auth user for:', email);
+
+    try {
+
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        console.log('✅ Auth user created with UID:', userCredential.user.uid);
+
+        if (displayName) {
+            await updateProfile(userCredential.user, { displayName });
+            console.log('✅ Display name updated:', displayName);
+        }
+
+        return { uid: userCredential.user.uid };
+    } catch (error) {
+        console.error('❌ Failed to create auth user:', error);
+        throw error;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface IUserService {
     getUsers(filters?: UserFilters): Promise<User[]>;
@@ -32,28 +56,22 @@ export class UserService implements IUserService {
 
     async getUsers(filters?: UserFilters): Promise<User[]> {
         try {
+            console.log('🔵 Fetching users with filters:', filters);
             const usersRef = collection(db, UserService.COLLECTION_NAME);
             let q = query(usersRef, orderBy('createdAt', 'desc'));
 
-            if (filters) {
-                if (filters.status && filters.status !== 'all') {
-                    q = query(q, where('status', '==', filters.status));
-                }
-                if (filters.role && filters.role !== 'all') {
-                    q = query(q, where('role', '==', filters.role));
-                }
-                if (filters.department) {
-                    q = query(q, where('department', '==', filters.department));
-                }
-            }
+            if (filters?.status && filters.status !== 'all')
+                q = query(q, where('status', '==', filters.status));
+            if (filters?.role && filters.role !== 'all')
+                q = query(q, where('role', '==', filters.role));
+            if (filters?.department)
+                q = query(q, where('department', '==', filters.department));
 
             const snapshot = await getDocs(q);
-            const users: User[] = [];
-
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                users.push({
-                    id: doc.id,
+            let users: User[] = snapshot.docs.map(d => {
+                const data = d.data();
+                return {
+                    id: d.id,
                     displayName: data.displayName,
                     email: data.email,
                     role: data.role,
@@ -63,20 +81,20 @@ export class UserService implements IUserService {
                     primaryLocationId: data.primaryLocationId,
                     assignedHubIds: data.assignedHubIds || [],
                     createdAt: data.createdAt?.toDate() || new Date(),
-                    updatedAt: data.updatedAt?.toDate() || new Date()
-                });
+                    updatedAt: data.updatedAt?.toDate() || new Date(),
+                };
             });
 
-            // Apply search filter client-side if needed
             if (filters?.searchTerm) {
                 const term = filters.searchTerm.toLowerCase();
-                return users.filter(user =>
-                    user.displayName?.toLowerCase().includes(term) ||
-                    user.email?.toLowerCase().includes(term) ||
-                    user.department?.toLowerCase().includes(term)
+                users = users.filter(u =>
+                    u.displayName?.toLowerCase().includes(term) ||
+                    u.email?.toLowerCase().includes(term) ||
+                    u.department?.toLowerCase().includes(term),
                 );
             }
 
+            console.log(`✅ Fetched ${users.length} users`);
             return users;
         } catch (error) {
             console.error('Error fetching users:', error);
@@ -86,16 +104,11 @@ export class UserService implements IUserService {
 
     async getUserById(id: string): Promise<User | null> {
         try {
-            const userRef = doc(db, UserService.COLLECTION_NAME, id);
-            const snapshot = await getDoc(userRef);
-
-            if (!snapshot.exists()) {
-                return null;
-            }
-
-            const data = snapshot.data();
+            const snap = await getDoc(doc(db, UserService.COLLECTION_NAME, id));
+            if (!snap.exists()) return null;
+            const data = snap.data();
             return {
-                id: snapshot.id,
+                id: snap.id,
                 displayName: data.displayName,
                 email: data.email,
                 role: data.role,
@@ -105,7 +118,7 @@ export class UserService implements IUserService {
                 primaryLocationId: data.primaryLocationId,
                 assignedHubIds: data.assignedHubIds || [],
                 createdAt: data.createdAt?.toDate() || new Date(),
-                updatedAt: data.updatedAt?.toDate() || new Date()
+                updatedAt: data.updatedAt?.toDate() || new Date(),
             };
         } catch (error) {
             console.error('Error fetching user:', error);
@@ -114,95 +127,87 @@ export class UserService implements IUserService {
     }
 
     async createUser(userData: UserFormData): Promise<User> {
+        console.log('🔵 Creating user with data:', { ...userData, password: '[HIDDEN]' });
+
         try {
-            // Validate user data
+            // Validation
             const validation = this.validateUser(userData);
             if (!validation.isValid) {
+                console.error('❌ Validation failed:', validation.errors);
                 throw new Error(Object.values(validation.errors).join(', '));
             }
 
-            // Check if password is provided for new user
             if (!userData.password) {
                 throw new Error('Password is required for new users');
             }
 
-            // Instead of using AuthService.register which logs in,
-            // we need a different approach. Let's create a new method
-            // in AuthService for admin creation
+            // Create Firebase Auth user (using the simplified function)
+            console.log('🔵 Creating Firebase Auth user...');
+            const { uid } = await createAuthUser(
+                userData.email,
+                userData.password,
+                userData.displayName,
+            );
+            console.log('✅ Firebase Auth user created with UID:', uid);
 
-            // For now, we'll create the auth user and then immediately
-            // log back in as admin - but we need admin credentials
-
-            // This is where the issue is - AuthService.register logs in the new user
-
-            // We need to modify AuthService to have a method that creates
-            // users without logging them in, but Firebase doesn't allow this
-            // on the client side. This requires a server solution.
-
-            // For now, let's proceed with what we have and fix it in the hook
-            const authResponse = await AuthService.register({
-                email: userData.email,
-                password: userData.password,
-                displayName: userData.displayName
-            });
-
-            if (!authResponse.success || !authResponse.user) {
-                throw new Error(authResponse.message || 'Failed to create authentication user');
-            }
-
-            // Create Firestore document
+            // Prepare Firestore document
+            const now = Timestamp.now();
             const newUserData = {
                 displayName: userData.displayName,
                 email: userData.email,
                 role: userData.role,
                 department: userData.department || '',
                 status: userData.status || 'active',
-                uid: authResponse.user.uid,
+                uid: uid,
                 assignedHubIds: userData.assignedHubIds || [],
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
+                primaryLocationId: userData.primaryLocationId || null,
+                createdAt: now,
+                updatedAt: now,
             };
 
-            const docRef = await addDoc(collection(db, UserService.COLLECTION_NAME), newUserData);
+            // Add to Firestore
+            console.log('🔵 Adding user to Firestore...');
+            const docRef = await addDoc(
+                collection(db, UserService.COLLECTION_NAME),
+                newUserData,
+            );
+            console.log('✅ Firestore document created with ID:', docRef.id);
 
+            // Return the created user
             return {
                 id: docRef.id,
-                ...newUserData,
+                displayName: newUserData.displayName,
+                email: newUserData.email,
+                role: newUserData.role as UserRole,
+                department: newUserData.department,
+                status: newUserData.status as 'active' | 'inactive',
+                uid: newUserData.uid,
+                primaryLocationId: newUserData.primaryLocationId || undefined,
+                assignedHubIds: newUserData.assignedHubIds,
                 createdAt: new Date(),
-                updatedAt: new Date()
+                updatedAt: new Date(),
             };
         } catch (error) {
-            console.error('Error creating user:', error);
+            console.error('❌ Error creating user:', error);
             throw new Error(error instanceof Error ? error.message : 'Failed to create user');
         }
     }
 
     async updateUser(id: string, updates: Partial<UserFormData>): Promise<User> {
         try {
+            console.log('🔵 Updating user:', id, updates);
             const userRef = doc(db, UserService.COLLECTION_NAME, id);
             const snapshot = await getDoc(userRef);
+            if (!snapshot.exists()) throw new Error('User not found');
 
-            if (!snapshot.exists()) {
-                throw new Error('User not found');
-            }
-
-            // Remove password from updates if present (can't update password through this method)
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { password, ...safeUpdates } = updates;
+            await updateDoc(userRef, { ...safeUpdates, updatedAt: serverTimestamp() });
 
-            const updateData = {
-                ...safeUpdates,
-                updatedAt: serverTimestamp()
-            };
-
-            await updateDoc(userRef, updateData);
-
-            const updatedUser = await this.getUserById(id);
-            if (!updatedUser) {
-                throw new Error('User not found after update');
-            }
-
-            return updatedUser;
+            const updated = await this.getUserById(id);
+            if (!updated) throw new Error('User not found after update');
+            console.log('✅ User updated:', id);
+            return updated;
         } catch (error) {
             console.error('Error updating user:', error);
             throw new Error('Failed to update user');
@@ -211,24 +216,18 @@ export class UserService implements IUserService {
 
     async deleteUser(id: string): Promise<void> {
         try {
+            console.log('🔵 Deleting user:', id);
             const userRef = doc(db, UserService.COLLECTION_NAME, id);
             const snapshot = await getDoc(userRef);
+            if (!snapshot.exists()) throw new Error('User not found');
 
-            if (!snapshot.exists()) {
-                throw new Error('User not found');
-            }
-
-            const userData = snapshot.data();
-
-            // If the user has a Firebase Auth UID, delete them from Auth as well
-            if (userData.uid) {
-                // Note: Deleting users from Firebase Auth requires Admin SDK
-                // You might want to handle this separately or use Firebase Admin
-                console.log(`User ${userData.uid} needs to be deleted from Auth`);
-                // You could call a cloud function here to delete the auth user
+            const data = snapshot.data();
+            if (data.uid) {
+                console.log(`Note: Auth user ${data.uid} should be deleted via Cloud Function`);
             }
 
             await deleteDoc(userRef);
+            console.log('✅ User deleted:', id);
         } catch (error) {
             console.error('Error deleting user:', error);
             throw new Error('Failed to delete user');
@@ -237,27 +236,18 @@ export class UserService implements IUserService {
 
     async toggleUserStatus(id: string): Promise<User> {
         try {
+            console.log('🔵 Toggling user status:', id);
             const userRef = doc(db, UserService.COLLECTION_NAME, id);
             const snapshot = await getDoc(userRef);
+            if (!snapshot.exists()) throw new Error('User not found');
 
-            if (!snapshot.exists()) {
-                throw new Error('User not found');
-            }
+            const newStatus = snapshot.data().status === 'active' ? 'inactive' : 'active';
+            await updateDoc(userRef, { status: newStatus, updatedAt: serverTimestamp() });
 
-            const data = snapshot.data();
-            const newStatus = data.status === 'active' ? 'inactive' : 'active';
-
-            await updateDoc(userRef, {
-                status: newStatus,
-                updatedAt: serverTimestamp()
-            });
-
-            const updatedUser = await this.getUserById(id);
-            if (!updatedUser) {
-                throw new Error('User not found after status update');
-            }
-
-            return updatedUser;
+            const updated = await this.getUserById(id);
+            if (!updated) throw new Error('User not found after status update');
+            console.log('✅ Status toggled to:', newStatus);
+            return updated;
         } catch (error) {
             console.error('Error toggling user status:', error);
             throw new Error('Failed to toggle user status');
@@ -267,26 +257,21 @@ export class UserService implements IUserService {
     async getUserStats(): Promise<UserStats> {
         try {
             const users = await this.getUsers();
-
-            const totalUsers = users.length;
-            const activeUsers = users.filter(u => u.status === 'active').length;
-            const inactiveUsers = users.filter(u => u.status === 'inactive').length;
-            const adminsCount = users.filter(u => u.role === 'admin').length;
-            const facilitatorsCount = users.filter(u => u.role === 'facilitator').length;
-
             const usersByDepartment: Record<string, number> = {};
-            users.forEach(user => {
-                const dept = user.department || 'Unknown';
+            users.forEach(u => {
+                const dept = u.department || 'Unknown';
                 usersByDepartment[dept] = (usersByDepartment[dept] || 0) + 1;
             });
-
             return {
-                totalUsers,
-                activeUsers,
-                inactiveUsers,
-                adminsCount,
-                facilitatorsCount,
-                usersByDepartment
+                totalUsers: users.length,
+                activeUsers: users.filter(u => u.status === 'active').length,
+                inactiveUsers: users.filter(u => u.status === 'inactive').length,
+                adminsCount: users.filter(u => u.role === 'super_admin').length,
+                managersCount: users.filter(u => u.role === 'hub_manager').length,
+                itCount: users.filter(u => u.role === 'it').length,
+                facilitatorsCount: users.filter(u => u.role === 'asset_facilitator').length,
+                studentsCount: users.filter(u => u.role === 'student').length,
+                usersByDepartment,
             };
         } catch (error) {
             console.error('Error getting user stats:', error);
@@ -295,97 +280,48 @@ export class UserService implements IUserService {
     }
 
     validateUser(data: UserFormData): { isValid: boolean; errors: Record<string, string> } {
-        // Get base validation from UserValidation
         const validationResult = UserValidation.validateUserForm(data);
-
-        // Create a properly typed errors object
         const errors: Record<string, string> = {};
 
-        // Handle validationResult.errors based on its actual structure
-        // It might be an array of ValidationError objects
         if (Array.isArray(validationResult.errors)) {
-            // If it's an array, convert each error to a string and store with a generic key
             validationResult.errors.forEach((error, index) => {
                 if (typeof error === 'string') {
                     errors[`error${index}`] = error;
                 } else if (error && typeof error === 'object') {
-                    // If it's an object with message property
-                    const errorObj = error as { field?: string; message?: string };
-                    if (errorObj.field && errorObj.message) {
-                        errors[errorObj.field] = errorObj.message;
-                    } else if (errorObj.message) {
-                        errors[`error${index}`] = errorObj.message;
-                    }
+                    const e = error as { field?: string; message?: string };
+                    if (e.field && e.message) errors[e.field] = e.message;
+                    else if (e.message) errors[`error${index}`] = e.message;
                 }
             });
         } else if (validationResult.errors && typeof validationResult.errors === 'object') {
-            // If it's an object, process each key
-            const errorObj = validationResult.errors as Record<string, unknown>;
-
-            Object.keys(errorObj).forEach(key => {
-                const errorValue = errorObj[key];
-                if (Array.isArray(errorValue)) {
-                    errors[key] = errorValue.join('. ');
-                } else if (typeof errorValue === 'string') {
-                    errors[key] = errorValue;
-                } else if (errorValue && typeof errorValue === 'object') {
-                    // Handle nested error objects
-                    const nestedError = errorValue as { message?: string };
-                    if (nestedError.message) {
-                        errors[key] = nestedError.message;
-                    }
+            Object.entries(validationResult.errors as Record<string, unknown>).forEach(([key, val]) => {
+                if (Array.isArray(val)) errors[key] = val.join('. ');
+                else if (typeof val === 'string') errors[key] = val;
+                else if (val && typeof val === 'object') {
+                    const nested = val as { message?: string };
+                    if (nested.message) errors[key] = nested.message;
                 }
             });
         }
 
-        // Add password validation for new users
-        // Check if this is a new user (no existing displayName in initial data)
-        const isNewUser = !data.displayName; // Use displayName to determine if it's new/edit
+        if (data.role && !ALL_ROLES.includes(data.role)) {
+            errors.role = `Invalid role. Must be one of: ${ALL_ROLES.join(', ')}`;
+        }
 
-        if (isNewUser) {
-            if (!data.password) {
-                errors.password = 'Password is required';
-            } else {
-                const passwordErrors: string[] = [];
-
-                // Password validation
-                const hasUppercase = /[A-Z]/.test(data.password);
-                const hasLowercase = /[a-z]/.test(data.password);
-                const hasNumber = /[0-9]/.test(data.password);
-                const hasSpecial = /[!@#$%^&*]/.test(data.password);
-                const isLongEnough = data.password.length >= 8;
-
-                if (!isLongEnough) {
-                    passwordErrors.push('Password must be at least 8 characters');
-                }
-                if (!hasUppercase) {
-                    passwordErrors.push('Password must contain an uppercase letter');
-                }
-                if (!hasLowercase) {
-                    passwordErrors.push('Password must contain a lowercase letter');
-                }
-                if (!hasNumber) {
-                    passwordErrors.push('Password must contain a number');
-                }
-                if (!hasSpecial) {
-                    passwordErrors.push('Password must contain a special character (!@#$%^&*)');
-                }
-
-                if (passwordErrors.length > 0) {
-                    errors.password = passwordErrors.join('. ');
-                }
+        if (data.password) {
+            const pw: string[] = [];
+            if (data.password.length < 8) pw.push('at least 8 characters');
+            if (!/[A-Z]/.test(data.password)) pw.push('an uppercase letter');
+            if (!/[a-z]/.test(data.password)) pw.push('a lowercase letter');
+            if (!/[0-9]/.test(data.password)) pw.push('a number');
+            if (!/[!@#$%^&*]/.test(data.password)) pw.push('a special character (!@#$%^&*)');
+            if (pw.length > 0) {
+                errors.password = `Password must contain: ${pw.join(', ')}`;
             }
         }
 
-        // Determine overall validity
-        const isValid = Object.keys(errors).length === 0;
-
-        return {
-            isValid,
-            errors
-        };
+        return { isValid: Object.keys(errors).length === 0, errors };
     }
 }
-//*9#8VgzDV7v4
-//user@example.com
+
 export const userService = new UserService();

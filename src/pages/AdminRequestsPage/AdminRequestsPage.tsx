@@ -6,45 +6,33 @@ import { RequestStats } from '../../features/shared/RequestStats';
 import { IRequest, RequestItem } from '../../core/types/request.types';
 import './AdminRequestsPage.css';
 
-// Define proper types for Firebase Timestamp
-interface FirebaseTimestamp {
-    toDate: () => Date;
-    seconds: number;
-    nanoseconds: number;
-}
+// ── Timestamp helper ──────────────────────────────────────────────────────────
 
+interface FirebaseTimestamp { toDate: () => Date; seconds: number; nanoseconds: number; }
 type DateInput = FirebaseTimestamp | Date | string | null | undefined;
 
-// Helper function to convert Firebase Timestamp to Date
-const timestampToDate = (timestamp: DateInput): Date | undefined => {
-    if (!timestamp) return undefined;
-
-    if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
-        return (timestamp as FirebaseTimestamp).toDate();
+const toDate = (val: DateInput): Date | undefined => {
+    if (!val) return undefined;
+    if (typeof val === 'object' && 'toDate' in val) return val.toDate();
+    if (val instanceof Date) return val;
+    if (typeof val === 'string') {
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? undefined : d;
     }
-
-    if (timestamp instanceof Date) {
-        return timestamp;
-    }
-
-    if (typeof timestamp === 'string') {
-        const date = new Date(timestamp);
-        return isNaN(date.getTime()) ? undefined : date;
-    }
-
     return undefined;
 };
 
+// ── Status label helper ───────────────────────────────────────────────────────
+
+const statusLabel = (s: string) =>
+    s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export const AdminRequestsPage: React.FC = () => {
     const {
-        requests,
-        stats,
-        loading,
-        error,
-        approveRequest,
-        rejectRequest,
-        fulfillRequest,
-        refresh
+        requests, stats, loading, error,
+        approveRequest, rejectRequest, fulfillRequest, refresh,
     } = useAdminRequests();
 
     const [selectedRequest, setSelectedRequest] = useState<IRequest | null>(null);
@@ -53,58 +41,56 @@ export const AdminRequestsPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-    // Format date helper
-    const formatDate = useCallback((timestamp: DateInput): string => {
-        const date = timestampToDate(timestamp);
-        if (!date) return 'N/A';
+    // ── Helpers ─────────────────────────────────────────────────────────────────
 
-        return date.toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+    const formatDate = useCallback((ts: DateInput): string => {
+        const d = toDate(ts);
+        if (!d) return 'N/A';
+        return d.toLocaleDateString('en-GB', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit',
         });
     }, []);
 
-    // Get item display string from RequestItem
-    const getItemDisplay = useCallback((item: RequestItem): string => {
-        return `${item.assetType} (${item.category}) - Qty: ${item.quantity}`;
-    }, []);
+    const getItemDisplay = useCallback(
+        (item: RequestItem) => `${item.assetType} (${item.category}) × ${item.quantity}`,
+        [],
+    );
+
+    const getStatusDate = useCallback(
+        (req: IRequest): string => {
+            if (req.status === 'approved') return formatDate(req.updatedAt);
+            if (req.status === 'rejected' && req.approval?.rejectedAt)
+                return formatDate(req.approval.rejectedAt);
+            if (req.status === 'fulfilled') return formatDate(req.updatedAt);
+            return '—';
+        },
+        [formatDate],
+    );
+
+    // ── Handlers ─────────────────────────────────────────────────────────────────
 
     const handleApprove = async (requestId: string) => {
-        const confirmed = window.confirm('Approve this request?');
-        if (confirmed) {
-            await approveRequest(requestId);
-            refresh();
-        }
+        if (!window.confirm('Approve this request?')) return;
+        await approveRequest(requestId);
+        refresh();
     };
 
     const handleReject = async (requestId: string) => {
         const reason = window.prompt('Reason for rejection:');
-        if (reason) {
-            await rejectRequest(requestId, reason);
-            refresh();
-        }
+        if (!reason) return;
+        await rejectRequest(requestId, reason);
+        refresh();
     };
 
     const handleFulfill = async () => {
-        if (!selectedRequest || !selectedRequest.id) {
-            alert('Error: Request ID not found');
-            return;
-        }
-
-        const items = selectedRequest.items?.map((item, index) => ({
-            itemId: String(index),
-            fulfilledQuantity: item.quantity
-        })) || [];
-
-        const success = await fulfillRequest(selectedRequest.id, {
-            notes: 'Fulfilled by admin',
-            items: items
-        });
-
-        if (success) {
+        if (!selectedRequest?.id) { alert('Error: Request ID not found'); return; }
+        const items = (selectedRequest.items ?? []).map((item, i) => ({
+            itemId: String(i),
+            fulfilledQuantity: item.quantity,
+        }));
+        const ok = await fulfillRequest(selectedRequest.id, { notes: 'Fulfilled by admin', items });
+        if (ok) {
             setShowFulfillModal(false);
             setSelectedRequest(null);
             refresh();
@@ -116,45 +102,28 @@ export const AdminRequestsPage: React.FC = () => {
         setFilterStatus('all');
     };
 
-    const activeFilterCount = [
-        filterStatus !== 'all',
-        searchTerm !== ''
-    ].filter(Boolean).length;
+    const activeFilterCount = [filterStatus !== 'all', searchTerm !== ''].filter(Boolean).length;
 
-    // Get status date based on actual Firestore structure
-    const getStatusDate = useCallback((request: IRequest): string => {
-        if (request.status === 'approved' && request.approval?.status === 'approved') {
-            return formatDate(request.updatedAt); // Use updatedAt as approval timestamp
-        }
-        if (request.status === 'rejected' && request.approval?.rejectedAt) {
-            return formatDate(request.approval.rejectedAt);
-        }
-        if (request.status === 'fulfilled') {
-            return formatDate(request.updatedAt); // Use updatedAt for fulfillment
-        }
-        return '—';
-    }, [formatDate]);
+    // ── Filter ────────────────────────────────────────────────────────────────
 
-    // Filter requests based on search and status
-    const filteredRequests = requests.filter(request => {
-        const matchesSearch = searchTerm === '' ||
-            request.requestId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            request.requesterName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            request.requesterEmail?.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesStatus = filterStatus === 'all' || request.status === filterStatus;
-
-        return matchesSearch && matchesStatus;
+    const filteredRequests = requests.filter(r => {
+        const matchSearch =
+            searchTerm === '' ||
+            r.requestId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            r.requesterName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            r.requesterEmail?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchStatus = filterStatus === 'all' || r.status === filterStatus;
+        return matchSearch && matchStatus;
     });
+
+    // ── Loading / error ───────────────────────────────────────────────────────
 
     if (loading) {
         return (
             <DashboardLayout activePage="requests">
                 <div className="state-container">
-                    <div className="loading-indicator">
-                        <div className="spinner"></div>
-                    </div>
-                    <p className="state-message">Loading requests...</p>
+                    <div className="loading-indicator"><div className="spinner" /></div>
+                    <p className="state-message">Loading requests…</p>
                 </div>
             </DashboardLayout>
         );
@@ -166,100 +135,86 @@ export const AdminRequestsPage: React.FC = () => {
                 <div className="state-container error">
                     <div className="state-indicator">!</div>
                     <p className="state-message">{error}</p>
-                    <button
-                        onClick={refresh}
-                        className="retry-button"
-                    >
-                        Try Again
-                    </button>
+                    <button onClick={refresh} className="retry-button" type="button">Try Again</button>
                 </div>
             </DashboardLayout>
         );
     }
 
+    // ── Render ────────────────────────────────────────────────────────────────
+
     return (
         <DashboardLayout activePage="requests">
             <div className="requests-page">
-                {/* Header Section */}
+
+                {/* Header */}
                 <div className="page-header">
                     <div className="header-content">
                         <h1 className="page-title">Request Management</h1>
                         <p className="page-description">
-                            Review and manage asset requests from facilitators
+                            Final approval stage — review and action requests from facilitators and managers.
                         </p>
                     </div>
                     {stats && (
                         <div className="header-stats">
                             <div className="stat-item">
-                                <span className="stat-label">Total Requests</span>
-                                <span className="stat-value">{stats.total || 0}</span>
+                                <span className="stat-label">Total</span>
+                                <span className="stat-value">{stats.total ?? 0}</span>
                             </div>
-                            <div className="stat-divider"></div>
+                            <div className="stat-divider" />
                             <div className="stat-item">
-                                <span className="stat-label">Pending</span>
-                                <span className="stat-value highlight">{stats.pending || 0}</span>
+                                <span className="stat-label">Awaiting Admin</span>
+                                <span className="stat-value highlight">{stats.pendingAdmin ?? 0}</span>
+                            </div>
+                            <div className="stat-divider" />
+                            <div className="stat-item">
+                                <span className="stat-label">Approved</span>
+                                <span className="stat-value">{stats.approved ?? 0}</span>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Controls Section */}
+                {/* Controls */}
                 <div className="controls-section">
                     <div className="search-section">
                         <div className="search-field">
                             <input
                                 type="text"
-                                placeholder="Search by request ID or requester name..."
+                                placeholder="Search by request ID, name or email…"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={e => setSearchTerm(e.target.value)}
                                 className="search-input"
                             />
                         </div>
 
                         <div className="filter-bar">
                             <div className="filter-group">
-                                <button
-                                    className={`filter-button ${filterStatus === 'all' ? 'active' : ''}`}
-                                    onClick={() => setFilterStatus('all')}
-                                    type="button"
-                                >
-                                    All Requests
-                                </button>
-                                <button
-                                    className={`filter-button ${filterStatus === 'pending' ? 'active' : ''}`}
-                                    onClick={() => setFilterStatus('pending')}
-                                    type="button"
-                                >
-                                    Pending
-                                </button>
-                                <button
-                                    className={`filter-button ${filterStatus === 'approved' ? 'active' : ''}`}
-                                    onClick={() => setFilterStatus('approved')}
-                                    type="button"
-                                >
-                                    Approved
-                                </button>
-                                <button
-                                    className={`filter-button ${filterStatus === 'rejected' ? 'active' : ''}`}
-                                    onClick={() => setFilterStatus('rejected')}
-                                    type="button"
-                                >
-                                    Rejected
-                                </button>
-                                <button
-                                    className={`filter-button ${filterStatus === 'fulfilled' ? 'active' : ''}`}
-                                    onClick={() => setFilterStatus('fulfilled')}
-                                    type="button"
-                                >
-                                    Fulfilled
-                                </button>
+                                {([
+                                    ['all', 'All'],
+                                    ['pending', 'Pending'],
+                                    ['under_review', 'Under Review'],
+                                    ['pending_admin', 'Awaiting Admin'],
+                                    ['approved', 'Approved'],
+                                    ['rejected', 'Rejected'],
+                                    ['fulfilled', 'Fulfilled'],
+                                ] as [string, string][]).map(([val, label]) => (
+                                    <button
+                                        key={val}
+                                        className={`filter-button ${filterStatus === val ? 'active' : ''}`}
+                                        onClick={() => setFilterStatus(val)}
+                                        type="button"
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
                             </div>
 
-                            {/* Advanced Filters Toggle */}
+                            {/* Advanced filters */}
                             <div className="advanced-filters">
                                 <button
                                     className={`filters-toggle ${showAdvancedFilters ? 'active' : ''}`}
-                                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                                    onClick={() => setShowAdvancedFilters(v => !v)}
                                     type="button"
                                 >
                                     <span>Advanced Filters</span>
@@ -269,87 +224,66 @@ export const AdminRequestsPage: React.FC = () => {
                                 {showAdvancedFilters && (
                                     <div className="filters-panel">
                                         <div className="filters-grid">
-                                            {/* Priority Filters */}
                                             <div className="filter-section">
                                                 <label className="filter-label">Priority</label>
                                                 <div className="filter-options">
-                                                    {['low', 'medium', 'high', 'urgent'].map(priority => (
-                                                        <label key={priority} className="filter-checkbox">
+                                                    {['low', 'medium', 'high', 'urgent'].map(p => (
+                                                        <label key={p} className="filter-checkbox">
                                                             <input type="checkbox" />
-                                                            <span className="checkbox-text priority">
-                                                                {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                                                            </span>
+                                                            <span className="checkbox-text priority">{p.charAt(0).toUpperCase() + p.slice(1)}</span>
                                                         </label>
                                                     ))}
                                                 </div>
                                             </div>
 
-                                            {/* Date Range */}
                                             <div className="filter-section">
                                                 <label className="filter-label">Date Range</label>
                                                 <div className="date-range">
-                                                    <input
-                                                        type="date"
-                                                        className="date-input"
-                                                    />
+                                                    <input type="date" className="date-input" />
                                                     <span className="date-separator">to</span>
-                                                    <input
-                                                        type="date"
-                                                        className="date-input"
-                                                    />
+                                                    <input type="date" className="date-input" />
                                                 </div>
                                             </div>
 
-                                            {/* Department */}
                                             <div className="filter-section">
                                                 <label className="filter-label">Department</label>
-                                                <input
-                                                    type="text"
-                                                    className="filter-input"
-                                                    placeholder="Filter by department"
-                                                />
+                                                <input type="text" className="filter-input" placeholder="Filter by department" />
                                             </div>
                                         </div>
 
-                                        {/* Filter Actions */}
                                         <div className="filter-actions">
-                                            <button className="apply-filters-btn">Apply Filters</button>
-                                            <button className="clear-filters-btn">Clear All</button>
+                                            <button className="apply-filters-btn" type="button">Apply Filters</button>
+                                            <button className="clear-filters-btn" onClick={handleClearFilters} type="button">
+                                                Clear All
+                                            </button>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
                             {activeFilterCount > 0 && (
-                                <button
-                                    className="clear-filters"
-                                    onClick={handleClearFilters}
-                                    type="button"
-                                >
-                                    Clear Filters ({activeFilterCount})
+                                <button className="clear-filters" onClick={handleClearFilters} type="button">
+                                    Clear ({activeFilterCount})
                                 </button>
                             )}
                         </div>
                     </div>
 
                     <div className="action-section">
-                        <button
-                            className="action-button secondary"
-                            onClick={refresh}
-                        >
+                        <button className="action-button secondary" onClick={refresh} type="button">
                             Refresh
                         </button>
                     </div>
                 </div>
 
-                {/* Stats Section */}
+                {/* Stats */}
                 {stats && (
                     <div className="stats-section">
                         <RequestStats stats={stats} />
                     </div>
                 )}
 
-                {/* Table Section */}
+                {/* Table */}
                 <div className="table-section">
                     <div className="table-wrapper">
                         <table className="requests-table">
@@ -367,89 +301,82 @@ export const AdminRequestsPage: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredRequests.map((request) => (
-                                    <tr key={request.id} className="request-row">
+                                {filteredRequests.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                                            No requests match your filters.
+                                        </td>
+                                    </tr>
+                                ) : filteredRequests.map(req => (
+                                    <tr key={req.id}>
                                         <td className="request-id">
-                                            {request.requestId || request.id?.substring(0, 8)}
+                                            {req.requestId || req.id?.substring(0, 8)}
                                         </td>
                                         <td className="requester-info">
-                                            <div className="requester-name">{request.requesterName}</div>
-                                            {request.requesterEmail && (
-                                                <div className="requester-email">{request.requesterEmail}</div>
+                                            <div className="requester-name">{req.requesterName}</div>
+                                            {req.requesterEmail && (
+                                                <div className="requester-email">{req.requesterEmail}</div>
                                             )}
                                         </td>
-                                        <td>{request.department || '—'}</td>
+                                        <td>{req.department || '—'}</td>
                                         <td>
-                                            <span className="items-count">
-                                                {request.items?.length || 0} items
-                                            </span>
-                                            {request.items && request.items.length > 0 && (
+                                            <span className="items-count">{req.items?.length ?? 0} items</span>
+                                            {(req.items?.length ?? 0) > 0 && (
                                                 <div className="items-preview">
-                                                    {request.items.slice(0, 2).map((item, idx) => (
-                                                        <span key={idx} className="item-preview">
-                                                            {getItemDisplay(item)}
-                                                        </span>
+                                                    {req.items.slice(0, 2).map((item, i) => (
+                                                        <span key={i} className="item-preview">{getItemDisplay(item)}</span>
                                                     ))}
-                                                    {request.items.length > 2 && (
-                                                        <span className="more-items">
-                                                            +{request.items.length - 2} more
-                                                        </span>
+                                                    {req.items.length > 2 && (
+                                                        <span className="more-items">+{req.items.length - 2} more</span>
                                                     )}
                                                 </div>
                                             )}
                                         </td>
                                         <td>
-                                            <span className={`priority-badge priority-${request.priority || 'medium'}`}>
-                                                {request.priority || 'Medium'}
+                                            <span className={`priority-badge priority-${req.priority ?? 'medium'}`}>
+                                                {req.priority ?? 'medium'}
                                             </span>
                                         </td>
                                         <td>
-                                            <span className={`status-badge status-${request.status}`}>
-                                                {request.status.replace('_', ' ')}
+                                            <span className={`status-badge status-${req.status}`}>
+                                                {statusLabel(req.status)}
                                             </span>
                                         </td>
-                                        <td className="date-cell">
-                                            {formatDate(request.createdAt)}
-                                        </td>
-                                        <td className="date-cell">
-                                            {getStatusDate(request)}
-                                        </td>
+                                        <td className="date-cell">{formatDate(req.createdAt)}</td>
+                                        <td className="date-cell">{getStatusDate(req)}</td>
                                         <td className="actions-cell">
                                             <div className="action-group">
-                                                {request.status === 'pending' && (
+                                                {req.status === 'pending_admin' && (
                                                     <>
                                                         <button
                                                             className="action-button approve"
-                                                            onClick={() => handleApprove(request.id)}
-                                                            title="Approve request"
+                                                            onClick={() => handleApprove(req.id)}
+                                                            type="button"
                                                         >
                                                             Approve
                                                         </button>
                                                         <button
                                                             className="action-button reject"
-                                                            onClick={() => handleReject(request.id)}
-                                                            title="Reject request"
+                                                            onClick={() => handleReject(req.id)}
+                                                            type="button"
                                                         >
                                                             Reject
                                                         </button>
                                                     </>
                                                 )}
-                                                {request.status === 'approved' && (
+                                                {req.status === 'approved' && (
                                                     <button
                                                         className="action-button fulfill"
-                                                        onClick={() => {
-                                                            setSelectedRequest(request);
-                                                            setShowFulfillModal(true);
-                                                        }}
-                                                        title="Fulfill request"
+                                                        onClick={() => { setSelectedRequest(req); setShowFulfillModal(true); }}
+                                                        type="button"
                                                     >
                                                         Fulfill
                                                     </button>
                                                 )}
                                                 <button
                                                     className="action-button view"
-                                                    onClick={() => setSelectedRequest(request)}
-                                                    title="View details"
+                                                    onClick={() => setSelectedRequest(req)}
+                                                    type="button"
                                                 >
                                                     View
                                                 </button>
@@ -462,82 +389,60 @@ export const AdminRequestsPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Status Footer */}
+                {/* Footer */}
                 <div className="status-footer">
                     <div className="footer-left">
                         <span className="system-status">System Status</span>
-                        <span className="status-dot active"></span>
+                        <span className="status-dot active" />
                     </div>
                     <div className="footer-right">
                         Showing {filteredRequests.length} of {requests.length} requests
                     </div>
                 </div>
 
-                {/* Fulfill Modal */}
+                {/* Fulfill modal */}
                 {showFulfillModal && selectedRequest && (
                     <>
-                        <div className="modal-overlay" onClick={() => setShowFulfillModal(false)}></div>
+                        <div className="modal-overlay" onClick={() => setShowFulfillModal(false)} />
                         <div className="fulfill-modal">
                             <div className="modal-header">
                                 <h3 className="modal-title">Confirm Fulfillment</h3>
                             </div>
                             <div className="modal-body">
                                 <div className="request-details">
-                                    <div className="detail-row">
-                                        <span className="detail-label">Request ID:</span>
-                                        <span className="detail-value">{selectedRequest.requestId}</span>
-                                    </div>
-                                    <div className="detail-row">
-                                        <span className="detail-label">Requester:</span>
-                                        <span className="detail-value">{selectedRequest.requesterName}</span>
-                                    </div>
-                                    <div className="detail-row">
-                                        <span className="detail-label">Created:</span>
-                                        <span className="detail-value">{formatDate(selectedRequest.createdAt)}</span>
-                                    </div>
-                                    {selectedRequest.status === 'approved' && (
-                                        <div className="detail-row">
-                                            <span className="detail-label">Approved:</span>
-                                            <span className="detail-value">{formatDate(selectedRequest.updatedAt)}</span>
+                                    {[
+                                        ['Request ID', selectedRequest.requestId],
+                                        ['Requester', selectedRequest.requesterName],
+                                        ['Department', selectedRequest.department],
+                                        ['Created', formatDate(selectedRequest.createdAt)],
+                                        ['Approved', formatDate(selectedRequest.updatedAt)],
+                                        ['Items', String(selectedRequest.items?.length ?? 0)],
+                                    ].map(([label, value]) => (
+                                        <div key={label} className="detail-row">
+                                            <span className="detail-label">{label}</span>
+                                            <span className="detail-value">{value}</span>
                                         </div>
-                                    )}
-                                    {selectedRequest.status === 'rejected' && selectedRequest.approval?.rejectedAt && (
-                                        <div className="detail-row">
-                                            <span className="detail-label">Rejected:</span>
-                                            <span className="detail-value">{formatDate(selectedRequest.approval.rejectedAt)}</span>
-                                        </div>
-                                    )}
-                                    <div className="detail-row">
-                                        <span className="detail-label">Items:</span>
-                                        <span className="detail-value">{selectedRequest.items?.length || 0}</span>
-                                    </div>
-                                    {selectedRequest.items && selectedRequest.items.length > 0 && (
+                                    ))}
+                                    {(selectedRequest.items?.length ?? 0) > 0 && (
                                         <div className="detail-items">
-                                            {selectedRequest.items.map((item, idx) => (
-                                                <div key={idx} className="detail-item">
-                                                    {getItemDisplay(item)}
-                                                </div>
+                                            {selectedRequest.items.map((item, i) => (
+                                                <div key={i} className="detail-item">{getItemDisplay(item)}</div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
                                 <p className="confirmation-text">
-                                    Are you sure you want to mark this request as fulfilled?
+                                    Confirm marking this request as fulfilled? The requester will be notified.
                                 </p>
                             </div>
                             <div className="modal-actions">
-                                <button
-                                    onClick={handleFulfill}
-                                    className="modal-button confirm"
-                                >
+                                <button onClick={handleFulfill} className="modal-button confirm" type="button">
                                     Confirm Fulfillment
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        setShowFulfillModal(false);
-                                        setSelectedRequest(null);
-                                    }}
+                                    onClick={() => { setShowFulfillModal(false); setSelectedRequest(null); }}
                                     className="modal-button cancel"
+                                    type="button"
                                 >
                                     Cancel
                                 </button>
@@ -545,6 +450,7 @@ export const AdminRequestsPage: React.FC = () => {
                         </div>
                     </>
                 )}
+
             </div>
         </DashboardLayout>
     );
